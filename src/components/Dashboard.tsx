@@ -1,0 +1,361 @@
+
+'use client';
+
+import React, { useState } from 'react';
+import { 
+  Folder, Image as ImageIcon, Video, Upload, ChevronRight, 
+  Facebook, Instagram, Twitter, ChevronDown, ChevronUp, 
+  Zap, Monitor, Smartphone, Globe, Search, Bell, Menu, LayoutGrid, X,
+  Plus
+} from 'lucide-react';
+
+// --- SUB-COMPONENT: SINGLE DASHBOARD ROW ---
+const DashboardRow = ({ id, onDelete }: { id: number, onDelete?: () => void }) => {
+  // --- ESTADOS PROPIOS DE ESTA FILA ---
+  
+  // Estado Panel Central (Redes)
+  const [isSocialExpanded, setIsSocialExpanded] = useState(false);
+  const [activeNetwork, setActiveNetwork] = useState(1); // 1: FB, 2: IG, 3: TK, 4: X
+  
+  // Estado Panel Derecho (Navegador)
+  const [selectedBrowser, setSelectedBrowser] = useState('chrome'); // chrome, safari, firefox
+  const [viewMode, setViewMode] = useState('desktop'); // desktop, mobile
+
+  // Datos Simulados
+  const socialAccounts = [
+    { id: 1, name: 'Facebook', handle: '@MiMarcaOficial', icon: <Facebook className="w-5 h-5" />, color: 'text-blue-500', bgHover: 'hover:bg-blue-500/20', border: 'border-blue-500/50' },
+    { id: 2, name: 'Instagram', handle: '@estilo_futuro', icon: <Instagram className="w-5 h-5" />, color: 'text-pink-500', bgHover: 'hover:bg-pink-500/20', border: 'border-pink-500/50' },
+    { id: 3, name: 'TikTok', handle: '@viral_video', icon: <span className="font-bold text-lg leading-none">♪</span>, color: 'text-cyan-400', bgHover: 'hover:bg-cyan-500/20', border: 'border-cyan-500/50' },
+    { id: 4, name: 'Twitter/X', handle: '@news_now', icon: <Twitter className="w-5 h-5" />, color: 'text-gray-300', bgHover: 'hover:bg-gray-500/20', border: 'border-gray-500/50' },
+  ];
+
+  const folders = ['Campaña Verano 2026', 'Lanzamiento Producto', 'Reels Pendientes', 'Historias Destacadas', 'Memes Virales'];
+
+  const activeAccount = socialAccounts.find(a => a.id === activeNetwork) || socialAccounts[0];
+
+  return (
+    <div className="w-full h-[700px] bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl flex overflow-hidden relative group transition-all duration-500 hover:shadow-cyan-900/10 hover:border-white/20">
+      
+      {/* Botón Eliminar (opcional, solo visible al hover) */}
+      {onDelete && (
+          <button 
+            onClick={onDelete}
+            className="absolute top-2 right-2 z-50 p-2 bg-red-500/20 text-red-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
+          >
+            <X size={16} />
+          </button>
+      )}
+
+      {/* =======================================================
+          COLUMNA 1: GESTOR DE ACTIVOS (Izquierda)
+         ======================================================= */}
+      <div className="w-[280px] h-full border-r border-white/10 flex flex-col bg-black/10">
+          <div className="p-6 flex flex-col h-full">
+            {/* Título */}
+            <div className="flex items-center gap-2 mb-6 text-cyan-400 tracking-wider font-bold text-sm uppercase">
+              <Folder size={18} /> Explorador <span className="text-gray-600 text-xs ml-auto">#{id}</span>
+            </div>
+
+            {/* Drop Zone */}
+            <div className="border-2 border-dashed border-white/10 rounded-xl p-6 text-center hover:border-cyan-500/50 hover:bg-white/5 transition-all cursor-pointer group mb-6">
+              <Upload className="w-8 h-8 mx-auto mb-2 text-gray-500 group-hover:text-cyan-400 transition-colors" />
+              <p className="text-xs text-gray-400 font-medium">Subir Contenido</p>
+            </div>
+
+            {/* Lista de Carpetas */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+              {folders.map((folder, i) => (
+                <div key={i} className="group flex items-center gap-3 p-3 rounded-lg hover:bg-white/10 cursor-pointer transition-all border border-transparent hover:border-white/5">
+                  <div className={`p-2 rounded-md ${i % 2 === 0 ? 'bg-indigo-500/20 text-indigo-300' : 'bg-purple-500/20 text-purple-300'}`}>
+                    {i % 2 === 0 ? <ImageIcon size={14} /> : <Video size={14} />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-300 group-hover:text-white truncate">{folder}</p>
+                    <p className="text-[10px] text-gray-500">12 items</p>
+                  </div>
+                  <ChevronRight size={14} className="text-gray-700 group-hover:text-cyan-400 opacity-0 group-hover:opacity-100 transition-all" />
+                </div>
+              ))}
+            </div>
+
+            {/* Stats Footer */}
+            <div className="mt-4 pt-4 border-t border-white/10 text-xs text-gray-500 flex justify-between">
+              <span>Almacenamiento</span>
+              <span className="text-cyan-400">45% Usado</span>
+            </div>
+          </div>
+      </div>
+
+
+      {/* =======================================================
+          COLUMNA 2: SOCIAL HUB DINÁMICO (Centro)
+         ======================================================= */}
+      <div className="w-[380px] h-full border-r border-white/10 flex flex-col transition-all duration-500 bg-black/5">
+          
+          {/* HEADER / BARRA DE ACCESO RÁPIDO */}
+          <div className="p-4 bg-black/20 border-b border-white/5 flex items-center justify-between shrink-0">
+            <div className="flex gap-2">
+              {socialAccounts.map((acc) => (
+                <button
+                  key={acc.id}
+                  onClick={() => setActiveNetwork(acc.id)}
+                  className={`relative p-2.5 rounded-xl transition-all duration-300 border ${
+                    activeNetwork === acc.id 
+                      ? `bg-white/10 ${acc.border} shadow-[0_0_15px_rgba(255,255,255,0.1)] text-white` 
+                      : 'bg-transparent border-transparent text-gray-500 hover:bg-white/5 hover:text-gray-300'
+                  }`}
+                >
+                  {acc.icon}
+                  {/* Indicador Activo */}
+                  {activeNetwork === acc.id && (
+                    <span className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-cyan-400 rounded-full"></span>
+                  )}
+                </button>
+              ))}
+            </div>
+            
+            {/* Toggle Button */}
+            <button 
+              onClick={() => setIsSocialExpanded(!isSocialExpanded)}
+              className="p-2 bg-white/5 hover:bg-cyan-600/20 rounded-lg text-gray-400 hover:text-cyan-400 border border-white/5 transition-all"
+            >
+              {isSocialExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
+          </div>
+
+          {/* CONTENIDO DESPLEGABLE (Lista Detallada) */}
+          <div className={`transition-[max-height,opacity] duration-500 ease-in-out overflow-hidden bg-black/20 ${isSocialExpanded ? 'max-h-[600px] opacity-100 border-b border-white/5' : 'max-h-0 opacity-0'}`}>
+            <div className="p-4 space-y-3">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Cuentas Conectadas</p>
+              {socialAccounts.map((acc) => (
+                <div key={acc.id} onClick={() => setActiveNetwork(acc.id)} className={`flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/5 cursor-pointer transition-all ${acc.bgHover}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg bg-black/40 ${acc.color}`}>{acc.icon}</div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-200">{acc.name}</h4>
+                      <p className="text-[10px] text-gray-500">{acc.handle}</p>
+                    </div>
+                  </div>
+                  <Zap size={14} className={acc.id === activeNetwork ? 'text-green-400' : 'text-gray-600'} />
+                </div>
+              ))}
+              <button className="w-full py-2 text-xs text-center border border-dashed border-white/20 text-gray-400 rounded-lg hover:text-white hover:border-cyan-500 transition-colors">
+                + Conectar Nueva Marca
+              </button>
+            </div>
+          </div>
+
+          {/* ESTADO ACTIVO (Lo que se ve cuando está colapsado o expandido) */}
+          <div className="flex-1 p-6 flex flex-col relative overflow-hidden">
+             {/* Fondo sutil del color de la red */}
+             <div className={`absolute top-0 right-0 w-[200px] h-[200px] bg-gradient-to-br from-${activeAccount.color.split('-')[1]}-500/10 to-transparent rounded-full blur-3xl pointer-events-none`} />
+             
+             <div className="relative z-10 flex-1 flex flex-col">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-light">Panel <strong className={activeAccount.color}>{activeAccount.name}</strong></h2>
+                  <span className="px-2 py-1 bg-green-500/10 text-green-400 text-[10px] font-bold rounded uppercase border border-green-500/20">En Línea</span>
+                </div>
+
+                {/* Feed de Actividad / Cola de Publicación */}
+                <div className="flex-1 space-y-4">
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs text-gray-400">Próxima Publicación</span>
+                      <span className="text-xs text-cyan-400">Hoy, 18:00</span>
+                    </div>
+                    <div className="h-24 bg-black/30 rounded-lg border border-white/5 flex items-center justify-center text-gray-600 text-xs italic">
+                      Arrastra un archivo aquí para programar
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                     <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                        <div className="text-xl font-bold text-white">12.5K</div>
+                        <div className="text-[10px] text-gray-500 uppercase">Seguidores</div>
+                     </div>
+                     <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                        <div className="text-xl font-bold text-white">+5.2%</div>
+                        <div className="text-[10px] text-gray-500 uppercase">Engagement</div>
+                     </div>
+                  </div>
+                </div>
+                
+                <button className="mt-6 w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl font-bold shadow-lg shadow-cyan-900/20 transition-all active:scale-95">
+                  Crear Publicación
+                </button>
+             </div>
+          </div>
+      </div>
+
+
+      {/* =======================================================
+          COLUMNA 3: SIMULADOR DE NAVEGADOR (Derecha)
+         ======================================================= */}
+      <div className="flex-1 h-full flex flex-col bg-white">
+          
+          {/* Browser Controls */}
+          <div className="bg-[#1e293b] border-b border-white/10 p-2 flex items-center gap-4 text-white shrink-0">
+            {/* Semáforo Window */}
+            <div className="flex gap-1.5 ml-2">
+              <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+              <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+              <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+            </div>
+
+            {/* Selector de Navegador */}
+            <div className="flex bg-black/30 rounded-lg p-1 ml-4 border border-white/5">
+              {['chrome', 'safari', 'firefox'].map((browser) => (
+                <button
+                  key={browser}
+                  onClick={() => setSelectedBrowser(browser)}
+                  className={`px-3 py-1 rounded text-[10px] uppercase font-bold transition-all ${
+                    selectedBrowser === browser 
+                    ? 'bg-gray-700 text-white shadow-sm' 
+                    : 'text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  {browser}
+                </button>
+              ))}
+            </div>
+
+            {/* Barra de Dirección Simulada */}
+            <div className="flex-1 bg-black/40 rounded-md border border-white/5 px-3 py-1.5 flex items-center gap-2 text-xs text-gray-400 font-mono overflow-hidden">
+              <LockIcon className="w-3 h-3 text-green-500" />
+              <span>https://{activeAccount.name.toLowerCase()}.com/{activeAccount.handle.replace('@','')}</span>
+            </div>
+
+            {/* Device Toggle */}
+            <div className="flex gap-2 text-gray-400 mr-2">
+              <Monitor 
+                size={16} 
+                className={`cursor-pointer hover:text-white transition-colors ${viewMode === 'desktop' ? 'text-cyan-400' : ''}`}
+                onClick={() => setViewMode('desktop')}
+              />
+              <Smartphone 
+                size={16} 
+                className={`cursor-pointer hover:text-white transition-colors ${viewMode === 'mobile' ? 'text-cyan-400' : ''}`}
+                onClick={() => setViewMode('mobile')}
+              />
+            </div>
+          </div>
+
+          {/* Viewport Area */}
+          <div className="flex-1 relative overflow-hidden flex justify-center bg-gray-100">
+             {/* Contenedor simulado del sitio web */}
+             <div className={`bg-white shadow-2xl transition-all duration-500 flex flex-col overflow-hidden border-x border-gray-200 ${viewMode === 'mobile' ? 'w-[375px] my-4 rounded-[30px] border-y border-gray-800 ring-8 ring-gray-900 h-[calc(100%-2rem)]' : 'w-full h-full'}`}>
+               
+               {/* Fake Website Header */}
+               <div className="h-14 bg-white border-b flex items-center justify-between px-4 sticky top-0 z-20 shrink-0">
+                  <span className="font-bold text-xl tracking-tighter text-black">{activeAccount.name}</span>
+                  <div className="flex gap-3">
+                     <Search className="w-5 h-5 text-gray-400"/>
+                     <Menu className="w-5 h-5 text-black"/>
+                  </div>
+               </div>
+
+               {/* Fake Website Content */}
+               <div className="flex-1 overflow-y-auto p-0 scrollbar-hide bg-gray-50">
+                  {/* Hero Section */}
+                  <div className="h-48 bg-gradient-to-r from-gray-200 to-gray-300 flex items-center justify-center relative">
+                      <ImageIcon className="text-gray-400 w-12 h-12 opacity-50" />
+                      <div className="absolute bottom-[-24px] left-4 w-16 h-16 bg-white rounded-full border-4 border-white shadow-md"></div>
+                  </div>
+                  
+                  {/* Info */}
+                  <div className="pt-8 px-4 pb-4 bg-white mb-2">
+                     <h1 className="font-bold text-lg text-black">{activeAccount.handle}</h1>
+                     <p className="text-gray-600 text-sm mt-1">Marca oficial. Futuro del diseño y la tecnología.</p>
+                     <div className="flex gap-4 mt-3 text-sm">
+                        <span className="font-bold text-black">125 <span className="font-normal text-gray-500">Posts</span></span>
+                        <span className="font-bold text-black">12.5k <span className="font-normal text-gray-500">Followers</span></span>
+                     </div>
+                  </div>
+
+                  {/* Grid de Fotos */}
+                  <div className="grid grid-cols-3 gap-0.5">
+                     {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                       <div key={n} className="aspect-square bg-gray-200 relative group cursor-pointer hover:opacity-90">
+                          <img 
+                            src={`https://picsum.photos/400?random=${n + activeNetwork * 10 + id}`} 
+                            alt="Post" 
+                            className="w-full h-full object-cover"
+                          />
+                       </div>
+                     ))}
+                  </div>
+               </div>
+
+             </div>
+          </div>
+      </div>
+
+    </div>
+  );
+};
+
+// --- MAIN PAGE COMPONENT ---
+const FullStackDashboard = () => {
+    const [rows, setRows] = useState([1]); // Empieza con una fila (ID 1)
+
+    const addRow = () => {
+        const newId = rows.length > 0 ? Math.max(...rows) + 1 : 1;
+        setRows([...rows, newId]);
+    };
+
+    const deleteRow = (id: number) => {
+        setRows(rows.filter(rowId => rowId !== id));
+    };
+
+    return (
+        <div className="min-h-screen bg-[#09090b] text-slate-200 font-sans overflow-y-auto overflow-x-hidden relative selection:bg-cyan-500/30">
+        
+        {/* --- FONDO AMBIENTAL (Glow Effects) --- */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+            <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-indigo-800/20 rounded-full blur-[120px]" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-cyan-900/20 rounded-full blur-[120px]" />
+            <div className="absolute top-[20%] left-[30%] w-[20vw] h-[20vw] bg-purple-900/10 rounded-full blur-[80px]" />
+        </div>
+
+        {/* --- CONTENIDO PRINCIPAL --- */}
+        <div className="relative z-10 flex flex-col p-8 gap-8 max-w-[1600px] mx-auto pb-32">
+            
+            <header className="mb-4">
+                <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500">
+                    Dashboard Multicuentas
+                </h1>
+                <p className="text-gray-400">Gestiona múltiples marcas en paneles unificados.</p>
+            </header>
+
+            {/* Renderizar Filas */}
+            <div className="flex flex-col gap-12">
+                {rows.map((rowId) => (
+                    <DashboardRow key={rowId} id={rowId} onDelete={rows.length > 1 ? () => deleteRow(rowId) : undefined} />
+                ))}
+            </div>
+
+            {/* Botón Agregar Fila */}
+            <button 
+                onClick={addRow}
+                className="group flex flex-col items-center justify-center w-full py-12 border-2 border-dashed border-white/10 rounded-3xl hover:border-cyan-500/50 hover:bg-white/5 transition-all cursor-pointer mt-4"
+            >
+                <div className="p-4 rounded-full bg-white/5 group-hover:bg-cyan-500/20 group-hover:text-cyan-400 transition-colors mb-2">
+                    <Plus size={32} />
+                </div>
+                <span className="text-gray-400 font-medium group-hover:text-white transition-colors">Agregar Nueva Sección de Trabajo</span>
+            </button>
+
+        </div>
+        </div>
+    );
+};
+
+// Helper Icon Component
+const LockIcon = ({className}: {className: string}) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+  </svg>
+);
+
+export default FullStackDashboard;
