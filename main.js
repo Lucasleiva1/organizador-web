@@ -1,21 +1,25 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { exec } = require('child_process'); 
 
 function createWindow() {
+  const preloadPath = path.join(__dirname, 'preload.js');
+  console.log('📍 [MAIN] Preload path:', preloadPath);
+  
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     title: "Gestor Multi-Cuentas",
     webPreferences: {
-      nodeIntegration: false, 
-      contextIsolation: true, 
-      preload: path.join(__dirname, 'preload.js'), // Conectamos el puente
+      nodeIntegration: true, // Habilitamos Node en el render (temporal para debug)
+      contextIsolation: false, // Deshabilitamos aislamiento para acceso directo
+      preload: preloadPath,
     },
   });
 
-  // En desarrollo cargamos tu servidor local (Next.js defaults to 3001 if 3000 is busy)
-  const startUrl = process.env.ELECTRON_START_URL || 'http://localhost:3001';
+  // En desarrollo cargamos tu servidor local (Next.js defaults to 3000)
+  const startUrl = process.env.ELECTRON_START_URL || 'http://localhost:3000';
   mainWindow.loadURL(startUrl);
 }
 
@@ -55,6 +59,30 @@ ipcMain.on('abrir-browser', (event, { url, browser }) => {
       });
     }
   });
+});
+
+// --- EXPLORADOR DE CARPETAS ---
+// Abrir diálogo para seleccionar carpeta
+ipcMain.handle('select-folder', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory']
+  });
+  return result.canceled ? null : result.filePaths[0];
+});
+
+// Leer contenido de un directorio
+ipcMain.handle('read-dir', async (event, dirPath) => {
+  try {
+    const items = fs.readdirSync(dirPath, { withFileTypes: true });
+    return items.map(item => ({
+      name: item.name,
+      path: path.join(dirPath, item.name),
+      isDirectory: item.isDirectory()
+    }));
+  } catch (error) {
+    console.error('Error reading directory:', error);
+    return [];
+  }
 });
 
 app.whenReady().then(createWindow);

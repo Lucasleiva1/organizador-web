@@ -6,7 +6,8 @@ import {
   Facebook, Instagram, Twitter, ChevronDown, ChevronUp, 
   Zap, Monitor, Smartphone, Globe, Search, Bell, Menu, LayoutGrid, X,
   Plus, Trash2, Edit3, Settings, UserPlus, ExternalLink, Youtube,
-  Download, Upload as UploadIcon, FileJson, FilePlus, Users, Music2, PlusCircle, RefreshCcw, Link2, ChevronsDownUp, ChevronsUpDown
+  Download, Upload as UploadIcon, FileJson, FilePlus, Users, Music2, PlusCircle, RefreshCcw, Link2, ChevronsDownUp, ChevronsUpDown,
+  File, CornerLeftUp
 } from 'lucide-react';
 
 // --- ELECTRON API TYPE ---
@@ -14,6 +15,9 @@ declare global {
   interface Window {
     electronAPI?: {
       abrirExterno: (url: string, browser: string) => void;
+      selectFolder: () => Promise<string | null>;
+      readDir: (path: string) => Promise<Array<{name: string, path: string, isDirectory: boolean}>>;
+      platformSeparator: string;
     };
   }
 }
@@ -378,10 +382,51 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
   const [selectedBrowser, setSelectedBrowser] = useState('chrome'); // chrome, safari, firefox
   const [viewMode, setViewMode] = useState('desktop'); // desktop, mobile
 
-  // Estado Edición Título
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [showInactiveList, setShowInactiveList] = useState(false);
   const [openBrowserDropdown, setOpenBrowserDropdown] = useState<string | number | null>(null);
+  const [openGlobalBrowserDropdown, setOpenGlobalBrowserDropdown] = useState(false);
+
+  // --- EXPLORADOR DE CARPETAS ---
+  const [currentPath, setCurrentPath] = useState<string | null>(null); // Ruta actual
+  const [files, setFiles] = useState<Array<{name: string, path: string, isDirectory: boolean}>>([]); // Archivos visibles
+  const [history, setHistory] = useState<string[]>([]); // Historial para volver atrás
+
+  // --- PERSISTENCIA: CARGAR DATOS DE LOCALSTORAGE AL MONTAR ---
+  useEffect(() => {
+    try {
+      const savedBrowser = localStorage.getItem('dashboardSelectedBrowser');
+      const savedAccountsOpen = localStorage.getItem('dashboardAccountsOpen');
+      const savedUploadOpen = localStorage.getItem('dashboardUploadOpen');
+      const savedActiveNetwork = localStorage.getItem('dashboardActiveNetwork');
+      
+      if (savedBrowser) setSelectedBrowser(savedBrowser);
+      if (savedAccountsOpen !== null) setAccountsOpen(savedAccountsOpen === 'true');
+      if (savedUploadOpen !== null) setUploadOpen(savedUploadOpen === 'true');
+      if (savedActiveNetwork) setActiveNetwork(savedActiveNetwork);
+    } catch (error) {
+      console.error('Error loading saved state:', error);
+    }
+  }, []);
+
+  // --- PERSISTENCIA: GUARDAR NAVEGADOR SELECCIONADO ---
+  useEffect(() => {
+    localStorage.setItem('dashboardSelectedBrowser', selectedBrowser);
+  }, [selectedBrowser]);
+
+  // --- PERSISTENCIA: GUARDAR ESTADO DE ACORDEONES ---
+  useEffect(() => {
+    localStorage.setItem('dashboardAccountsOpen', String(isAccountsOpen));
+  }, [isAccountsOpen]);
+
+  useEffect(() => {
+    localStorage.setItem('dashboardUploadOpen', String(isUploadOpen));
+  }, [isUploadOpen]);
+
+  // --- PERSISTENCIA: GUARDAR RED ACTIVA ---
+  useEffect(() => {
+    localStorage.setItem('dashboardActiveNetwork', String(activeNetwork));
+  }, [activeNetwork]);
 
   // --- FUNCIÓN PARA ABRIR LINKS (Electron-aware) ---
   const handleOpenLink = (url: string, browser?: string) => {
@@ -396,6 +441,47 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
     } else {
       // Si estamos en web, abre en nueva pestaña
       window.open(url, '_blank');
+    }
+  };
+
+  // --- FUNCIÓN PARA APLICAR NAVEGADOR A TODAS LAS CUENTAS ---
+  const applyBrowserToAll = (browser: string) => {
+    const updated = accounts.map(acc => ({ ...acc, browserChoice: browser }));
+    onAccountsChange(updated);
+    setSelectedBrowser(browser);
+    setOpenGlobalBrowserDropdown(false);
+  };
+
+  // --- FUNCIONES DEL EXPLORADOR DE CARPETAS ---
+  // 1. Botón "Subir Contenido": Abre selector de Windows
+  const handleSelectRootFolder = async () => {
+    if (window.electronAPI) {
+      const path = await window.electronAPI.selectFolder();
+      if (path) navigateTo(path);
+    }
+  };
+
+  // 2. Función interna para leer la carpeta
+  const navigateTo = async (path: string) => {
+    if (window.electronAPI) {
+      const content = await window.electronAPI.readDir(path);
+      setCurrentPath(path);
+      setFiles(content);
+    }
+  };
+
+  // 3. Click en una carpeta (Entrar)
+  const handleFolderClick = (folderPath: string) => {
+    setHistory([...history, currentPath!]); // Guardamos donde estábamos
+    navigateTo(folderPath);
+  };
+
+  // 4. Click en Atrás (Subir nivel)
+  const handleGoBack = () => {
+    if (history.length > 0) {
+      const prevPath = history[history.length - 1];
+      setHistory(history.slice(0, -1));
+      navigateTo(prevPath);
     }
   };
 
@@ -534,36 +620,79 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
         <div className={`w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl flex overflow-hidden relative group hover:shadow-cyan-900/10 hover:border-white/20 transition-all duration-500 ease-in-out ${isCompact ? 'h-[320px] border-cyan-500/20 shadow-none' : 'h-[700px]'}`}>
         
         {/* =======================================================
-            COLUMNA 1: GESTOR DE ACTIVOS (Izquierda)
+            COLUMNA 1: EXPLORADOR (Funcional)
             ======================================================= */}
-        <div className="w-[280px] h-full border-r border-white/10 flex flex-col bg-black/10">
-            <div className="p-6 flex flex-col h-full">
-                {/* Título */}
-                <div className="flex items-center gap-2 mb-6 text-cyan-400 tracking-wider font-bold text-sm uppercase">
-                <Folder size={18} /> Explorador <span className="text-gray-600 text-xs ml-auto">#{id}</span>
-                </div>
+        <div className="w-[280px] flex flex-col bg-[#13131A] border-r border-white/5 overflow-hidden flex-shrink-0">
+          
+          {/* HEADER EXPLORADOR */}
+          <div className="flex-none h-[60px] p-4 bg-[#13131A] border-b border-white/5 flex justify-between items-center">
+               <div className="flex items-center gap-2 text-cyan-400 font-bold tracking-wider">
+                  <Folder size={18} />
+                  <span className="text-sm">EXPLORADOR</span>
+                  <span className="text-xs text-gray-600 ml-1">#{id}</span>
+               </div>
+               {/* Botón Atrás (Solo aparece si entraste a una carpeta) */}
+               {history.length > 0 && (
+                  <button onClick={handleGoBack} className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors" title="Atrás">
+                    <CornerLeftUp size={16} />
+                  </button>
+               )}
+          </div>
 
-                {/* Drop Zone */}
-                <div className="border-2 border-dashed border-white/10 rounded-xl p-6 text-center hover:border-cyan-500/50 hover:bg-white/5 transition-all cursor-pointer group mb-6">
-                <Upload className="w-8 h-8 mx-auto mb-2 text-gray-500 group-hover:text-cyan-400 transition-colors" />
-                <p className="text-xs text-gray-400 font-medium">Subir Contenido</p>
-                </div>
+          {/* CUERPO EXPLORADOR */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col">
+              
+              {/* BOTÓN GIGANTE: SUBIR CONTENIDO (Tu diseño punteado) */}
+              <div 
+                 onClick={handleSelectRootFolder}
+                 className="mb-6 border-2 border-dashed border-white/10 rounded-2xl h-32 flex flex-col items-center justify-center cursor-pointer hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all group shrink-0"
+              >
+                  <div className="mb-2 p-2 rounded-full bg-transparent group-hover:scale-110 transition-transform">
+                     <Upload size={24} className="text-cyan-500" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-300">Subir Contenido</span>
+              </div>
 
-                {/* Lista de Carpetas */}
-                {/* Lista de Carpetas (Eliminada) */}
-                <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                   {/* Espacio reservado para futuras carpetas o gestor de archivos */}
-                   <div className="p-4 text-center text-gray-600 text-xs italic border border-dashed border-white/5 rounded-lg">
-                       Sin carpetas activas
+              {/* LISTA DE ARCHIVOS O MENSAJE VACÍO */}
+              <div className="flex-1 min-h-0 flex flex-col">
+                 {!currentPath ? (
+                   // Estado Vacío (Como en tu foto "Sin carpetas activas")
+                   <div className="mt-4 p-4 border border-white/5 rounded-xl bg-white/5 text-center">
+                      <p className="text-xs text-gray-500 italic">Sin carpetas activas</p>
                    </div>
-                </div>
-
-                {/* Stats Footer */}
-                <div className="mt-4 pt-4 border-t border-white/10 text-xs text-gray-500 flex justify-between">
-                <span>Almacenamiento</span>
-                <span className="text-cyan-400">45% Usado</span>
-                </div>
-            </div>
+                 ) : (
+                   // Lista de Archivos Real
+                   <div className="space-y-1 overflow-y-auto custom-scrollbar pr-1">
+                      <p className="text-[10px] text-gray-500 mb-2 truncate font-mono px-1">
+                         ./{currentPath.split(window.electronAPI?.platformSeparator || '\\').pop()}
+                      </p>
+                      
+                      {files.map((file, i) => (
+                        <div 
+                          key={i} 
+                          onClick={() => file.isDirectory ? handleFolderClick(file.path) : null}
+                          className={`flex items-center gap-3 p-2 rounded-lg transition-colors group ${
+                             file.isDirectory ? 'cursor-pointer hover:bg-white/10' : 'cursor-default opacity-80'
+                          }`}
+                        >
+                           <div className={`p-1.5 rounded flex-shrink-0 ${file.isDirectory ? 'bg-purple-500/20 text-purple-400' : 'bg-white/5 text-gray-400'}`}>
+                              {file.isDirectory ? <Folder size={14} /> : <File size={14} />}
+                           </div>
+                           <span className="text-xs text-gray-300 truncate flex-1">{file.name}</span>
+                           {file.isDirectory && <ChevronRight size={12} className="text-gray-600"/>}
+                        </div>
+                      ))}
+                      {files.length === 0 && <p className="text-xs text-gray-500 p-2 text-center">Carpeta vacía</p>}
+                   </div>
+                 )}
+              </div>
+              
+              {/* FOOTER: ALMACENAMIENTO (Tu diseño inferior) */}
+              <div className="mt-auto pt-4 border-t border-white/5 flex justify-between items-end shrink-0">
+                 <span className="text-[10px] text-gray-500">Almacenamiento</span>
+                 <span className="text-[10px] font-bold text-cyan-500">45% Usado</span>
+              </div>
+          </div>
         </div>
 
 
@@ -594,13 +723,78 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
                 ))}
                 </div>
                 
-                {/* Botón de Configuración */}
-                <button 
-                onClick={() => setIsSettingsOpen(true)}
-                className="p-2 bg-white/5 hover:bg-cyan-600/20 rounded-lg text-gray-400 hover:text-cyan-400 border border-white/5 transition-all"
-                >
-                <Settings size={18} />
-                </button>
+                {/* Controles de la derecha: Navegador Global + Configuración */}
+                <div className="flex items-center gap-2">
+                    {/* Global Browser Selector */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setOpenGlobalBrowserDropdown(!openGlobalBrowserDropdown)}
+                            className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-purple-600/20 rounded-lg text-gray-400 hover:text-purple-400 border border-white/5 transition-all"
+                            title="Cambiar navegador para todas las cuentas"
+                        >
+                            {(() => {
+                                const icons: Record<string, string> = {
+                                    chrome: '🌐',
+                                    edge: '🔷',
+                                    firefox: '🦊',
+                                    opera: '🅾'
+                                };
+                                return (
+                                    <>
+                                        <span className="text-sm">{icons[selectedBrowser]}</span>
+                                        <ChevronDown size={14} />
+                                    </>
+                                );
+                            })()}
+                        </button>
+                        
+                        {/* Global Browser Dropdown Menu */}
+                        {openGlobalBrowserDropdown && (
+                            <div className="absolute top-full right-0 mt-1 bg-black/90 border border-purple-500/30 rounded-lg overflow-hidden shadow-xl z-50 min-w-[140px]">
+                                <div className="px-3 py-2 bg-purple-900/20 border-b border-purple-500/20">
+                                    <p className="text-[10px] text-purple-300 font-bold uppercase tracking-wide">Aplicar a todos</p>
+                                </div>
+                                {['chrome', 'edge', 'firefox', 'opera'].map((browser) => {
+                                    const isSelected = selectedBrowser === browser;
+                                    const icons: Record<string, string> = {
+                                        chrome: '🌐',
+                                        edge: '🔷',
+                                        firefox: '🦊',
+                                        opera: '🅾'
+                                    };
+                                    const names: Record<string, string> = {
+                                        chrome: 'Chrome',
+                                        edge: 'Edge',
+                                        firefox: 'Firefox',
+                                        opera: 'Opera'
+                                    };
+                                    return (
+                                        <button
+                                            key={browser}
+                                            onClick={() => applyBrowserToAll(browser)}
+                                            className={`w-full flex items-center gap-2 px-3 py-2 text-xs transition-all ${
+                                                isSelected 
+                                                    ? 'bg-purple-500/30 text-purple-300' 
+                                                    : 'text-gray-400 hover:bg-white/10 hover:text-white'
+                                            }`}
+                                        >
+                                            <span className="text-sm">{icons[browser]}</span>
+                                            <span>{names[browser]}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* Botón de Configuración */}
+                    <button 
+                        onClick={() => setIsSettingsOpen(true)}
+                        className="p-2 bg-white/5 hover:bg-cyan-600/20 rounded-lg text-gray-400 hover:text-cyan-400 border border-white/5 transition-all"
+                    >
+                        <Settings size={18} />
+                    </button>
+                </div>
             </div>
 
             {/* CUERPO CON SCROLL (Plegables Apilados) */}
@@ -617,7 +811,7 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
                     {/* LISTA DE ACTIVAS */}
                     {activeAccounts.length > 0 ? (
                     activeAccounts.map((acc) => (
-                        <div key={acc.id} onClick={() => setActiveNetwork(acc.id)} className={`group flex items-center gap-3 p-3 rounded-xl border border-white/5 bg-white/5 cursor-pointer transition-all hover:bg-white/10 hover:border-white/10 ${activeNetwork === acc.id ? 'ring-1 ring-white/20 bg-white/10' : ''}`}>
+                        <div key={acc.id} onClick={() => setActiveNetwork(acc.id)} className={`group flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${activeNetwork === acc.id ? `ring-2 ${acc.border} bg-white/10 shadow-lg` : 'border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10'}`}>
                             
                             {/* Icono */}
                             <div className={`p-2 rounded-lg bg-black/40 ${String(acc.color).replace('text-', 'bg-').replace('-500', '-500/20').replace('-400', '-400/20')} border border-white/5`}>
@@ -817,9 +1011,18 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
                 </div>
 
                 {/* Barra de Dirección Simulada */}
-                <div className="flex-1 bg-black/40 rounded-md border border-white/5 px-3 py-1.5 flex items-center gap-2 text-xs text-gray-400 font-mono overflow-hidden">
+                <div className="flex-1 bg-black/40 rounded-md border border-white/5 px-3 py-1.5 flex items-center gap-2 text-xs overflow-hidden">
                 <LockIcon className="w-3 h-3 text-green-500" />
-                <span>{activeAccount ? `https://${activeAccount.name.toLowerCase()}.com/${activeAccount.handle.replace('@','')}` : 'https://...'}</span>
+                {activeAccount && (
+                    <div className="flex items-center gap-2 overflow-hidden">
+                        <div className={`${activeAccount.color} flex-shrink-0`}>{activeAccount.icon}</div>
+                        <span className="text-gray-400 font-mono truncate">
+                            {activeAccount.handle && !activeAccount.handle.includes('Sin vincular') 
+                                ? activeAccount.handle 
+                                : `https://${activeAccount.name.toLowerCase()}.com`}
+                        </span>
+                    </div>
+                )}
                 </div>
 
                 {/* Device Toggle */}
@@ -853,16 +1056,35 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
 
                 {/* Fake Website Content */}
                 <div className="flex-1 overflow-y-auto p-0 scrollbar-hide bg-gray-50">
-                    {/* Hero Section */}
-                    <div className="h-48 bg-gradient-to-r from-gray-200 to-gray-300 flex items-center justify-center relative">
-                        <ImageIcon className="text-gray-400 w-12 h-12 opacity-50" />
-                        <div className="absolute bottom-[-24px] left-4 w-16 h-16 bg-white rounded-full border-4 border-white shadow-md"></div>
+                    {/* Hero Section with Dynamic Branding */}
+                    <div className={`h-48 relative overflow-hidden ${activeAccount ? 'bg-gradient-to-br' : 'bg-gradient-to-r from-gray-200 to-gray-300'}`} style={activeAccount ? {
+                        background: `linear-gradient(135deg, ${activeAccount.color.includes('blue') ? '#1e3a8a15' : activeAccount.color.includes('pink') ? '#be185d15' : activeAccount.color.includes('red') ? '#991b1b15' : activeAccount.color.includes('cyan') ? '#06525515' : '#1f293715'}, ${activeAccount.color.includes('blue') ? '#1e3a8a25' : activeAccount.color.includes('pink') ? '#be185d25' : activeAccount.color.includes('red') ? '#991b1b25' : activeAccount.color.includes('cyan') ? '#06525525' : '#1f293725'})`
+                    } : {}}>
+                        {/* Icon Watermark */}
+                        {activeAccount && (
+                            <div className="absolute inset-0 flex items-center justify-center opacity-5">
+                                <div className="scale-[3]">{activeAccount.icon}</div>
+                            </div>
+                        )}
+                        {!activeAccount && <ImageIcon className="text-gray-400 w-12 h-12 opacity-50 absolute inset-0 m-auto" />}
+                        
+                        {/* Profile Picture */}
+                        <div className="absolute bottom-[-24px] left-4 w-16 h-16 bg-white rounded-full border-4 border-white shadow-md flex items-center justify-center">
+                            {activeAccount && (
+                                <div className={activeAccount.color}>{activeAccount.icon}</div>
+                            )}
+                        </div>
                     </div>
                     
                     {/* Info */}
                     <div className="pt-8 px-4 pb-4 bg-white mb-2">
-                        <h1 className="font-bold text-lg text-black">{activeAccount?.handle || '...'}</h1>
-                        <p className="text-gray-600 text-sm mt-1">Marca oficial. Futuro del diseño y la tecnología.</p>
+                        <h1 className="font-bold text-lg text-black">
+                            {activeAccount?.name || 'Selecciona una cuenta'}
+                        </h1>
+                        <p className={`text-sm mt-1 font-medium ${activeAccount?.color || 'text-gray-600'}`}>
+                            {activeAccount?.handle || 'Sin vincular'}
+                        </p>
+                        <p className="text-gray-600 text-xs mt-2">Marca oficial. Futuro del diseño y la tecnología.</p>
                         <div className="flex gap-4 mt-3 text-sm">
                             <span className="font-bold text-black">125 <span className="font-normal text-gray-500">Posts</span></span>
                             <span className="font-bold text-black">12.5k <span className="font-normal text-gray-500">Followers</span></span>
@@ -986,6 +1208,51 @@ const FullStackDashboard = () => {
     const updateRowAccounts = (id: number, newAccounts: SocialAccount[]) => {
         setRows(rows.map(row => row.id === id ? { ...row, accounts: newAccounts } : row));
     };
+
+    // --- PERSISTENCIA: CARGAR FILAS DE LOCALSTORAGE AL MONTAR ---
+    useEffect(() => {
+        try {
+            const savedRows = localStorage.getItem('dashboardRows');
+            if (savedRows) {
+                const parsed = JSON.parse(savedRows);
+                // Reconstruir los iconos que no se pueden serializar
+                const rowsWithIcons = parsed.map((row: DashboardRowData) => ({
+                    ...row,
+                    accounts: row.accounts.map((acc: SocialAccount) => {
+                        const defaultData = PLATFORM_DEFAULTS[acc.id as string];
+                        if (defaultData) {
+                            // Crear JSX del componente icono
+                            const IconComponent = defaultData.icon;
+                            return { ...acc, icon: <IconComponent className="w-5 h-5" /> };
+                        }
+                        // Para cuentas personalizadas
+                        return { ...acc, icon: <Globe className="w-5 h-5" /> };
+                    })
+                }));
+                setRows(rowsWithIcons);
+            }
+        } catch (error) {
+            console.error('Error loading saved rows:', error);
+        }
+    }, []);
+
+    // --- PERSISTENCIA: GUARDAR FILAS EN LOCALSTORAGE AL CAMBIAR ---
+    useEffect(() => {
+        try {
+            // Crear versión serializable (sin iconos React)
+            const serializableRows = rows.map(row => ({
+                ...row,
+                accounts: row.accounts.map(acc => {
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                    const { icon, ...rest } = acc;
+                    return rest;
+                })
+            }));
+            localStorage.setItem('dashboardRows', JSON.stringify(serializableRows));
+        } catch (error) {
+            console.error('Error saving rows:', error);
+        }
+    }, [rows]);
 
     // --- FUNCIONALIDAD GUARDAR / CARGAR ---
     const fileInputRef = React.useRef<HTMLInputElement>(null);

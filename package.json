@@ -8,8 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "electron": "wait-on tcp:3001 && electron .",
-    "electron:dev": "concurrently -k \"npm run dev\" \"cross-env ELECTRON_START_URL=http://localhost:3001 npm run electron\""
+    "electron": "wait-on tcp:3000 && electron .",
+    "electron:dev": "concurrently -k \"npm run dev\" \"cross-env ELECTRON_START_URL=http://localhost:3000 npm run electron\""
   },
   "dependencies": {
     "clsx": "^2.1.1",
