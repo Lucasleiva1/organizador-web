@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -6,7 +5,8 @@ import {
   Folder, Image as ImageIcon, Video, Upload, ChevronRight, 
   Facebook, Instagram, Twitter, ChevronDown, ChevronUp, 
   Zap, Monitor, Smartphone, Globe, Search, Bell, Menu, LayoutGrid, X,
-  Plus, Trash2, Edit3, Settings, UserPlus, ExternalLink
+  Plus, Trash2, Edit3, Settings, UserPlus, ExternalLink, Youtube,
+  Download, Upload as UploadIcon, FileJson
 } from 'lucide-react';
 
 // --- TYPES ---
@@ -19,6 +19,21 @@ interface SocialAccount {
     bgHover: string;
     border: string;
 }
+
+interface DashboardRowData {
+    id: number;
+    title: string;
+    accounts: SocialAccount[];
+}
+
+// --- CONSTANTS ---
+const DEFAULT_ACCOUNTS: SocialAccount[] = [
+    { id: 1, name: 'Facebook', handle: '@MiMarcaOficial', icon: <Facebook className="w-5 h-5" />, color: 'text-blue-500', bgHover: 'hover:bg-blue-500/20', border: 'border-blue-500/50' },
+    { id: 2, name: 'Instagram', handle: '@estilo_futuro', icon: <Instagram className="w-5 h-5" />, color: 'text-pink-500', bgHover: 'hover:bg-pink-500/20', border: 'border-pink-500/50' },
+    { id: 3, name: 'TikTok', handle: '@viral_video', icon: <span className="font-bold text-lg leading-none">♪</span>, color: 'text-cyan-400', bgHover: 'hover:bg-cyan-500/20', border: 'border-cyan-500/50' },
+    { id: 4, name: 'Twitter/X', handle: '@news_now', icon: <Twitter className="w-5 h-5" />, color: 'text-gray-300', bgHover: 'hover:bg-gray-500/20', border: 'border-gray-500/50' },
+    { id: 5, name: 'YouTube', handle: '@mi_canal', icon: <Youtube className="w-5 h-5" />, color: 'text-red-500', bgHover: 'hover:bg-red-500/20', border: 'border-red-500/50' },
+];
 
 // --- SUB-COMPONENT: SETTINGS MODAL ---
 interface SettingsModalProps {
@@ -175,28 +190,22 @@ const SettingsModal = ({ isOpen, onClose, accounts, onSave }: SettingsModalProps
 interface DashboardRowProps {
     id: number;
     title: string;
+    accounts: SocialAccount[];
     onTitleChange: (newTitle: string) => void;
+    onAccountsChange: (newAccounts: SocialAccount[]) => void;
     onDelete: () => void;
     showDelete: boolean;
 }
 
-const DashboardRow = ({ id, title, onTitleChange, onDelete, showDelete }: DashboardRowProps) => {
-  // --- ESTADOS PROPIOS DE ESTA FILA ---
+const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, onDelete, showDelete }: DashboardRowProps) => {
+  // --- ESTADOS PROPIOS DE LA UI (No persistentes o locales) ---
   
   // Estado Panel Central (Redes)
   const [isSocialExpanded, setIsSocialExpanded] = useState(false);
-  const [activeNetwork, setActiveNetwork] = useState(1); // 1: FB, 2: IG, 3: TK, 4: X
+  const [activeNetwork, setActiveNetwork] = useState(accounts[0]?.id || 1); // Default to first account
   
   // Estado Configuración
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
-  // Datos Iniciales (State)
-  const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([
-    { id: 1, name: 'Facebook', handle: '@MiMarcaOficial', icon: <Facebook className="w-5 h-5" />, color: 'text-blue-500', bgHover: 'hover:bg-blue-500/20', border: 'border-blue-500/50' },
-    { id: 2, name: 'Instagram', handle: '@estilo_futuro', icon: <Instagram className="w-5 h-5" />, color: 'text-pink-500', bgHover: 'hover:bg-pink-500/20', border: 'border-pink-500/50' },
-    { id: 3, name: 'TikTok', handle: '@viral_video', icon: <span className="font-bold text-lg leading-none">♪</span>, color: 'text-cyan-400', bgHover: 'hover:bg-cyan-500/20', border: 'border-cyan-500/50' },
-    { id: 4, name: 'Twitter/X', handle: '@news_now', icon: <Twitter className="w-5 h-5" />, color: 'text-gray-300', bgHover: 'hover:bg-gray-500/20', border: 'border-gray-500/50' },
-  ]);
 
   // Estado Panel Derecho (Navegador)
   const [selectedBrowser, setSelectedBrowser] = useState('chrome'); // chrome, safari, firefox
@@ -205,10 +214,10 @@ const DashboardRow = ({ id, title, onTitleChange, onDelete, showDelete }: Dashbo
   // Estado Edición Título
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
-  // Mock Folders
+  // Mock Folders (Esto podría moverse al estado global también si se desea persistir)
   const folders = ['Campaña Verano 2026', 'Lanzamiento Producto', 'Reels Pendientes', 'Historias Destacadas', 'Memes Virales'];
 
-  const activeAccount = socialAccounts.find(a => a.id === activeNetwork) || socialAccounts[0];
+  const activeAccount = accounts.find(a => a.id === activeNetwork) || accounts[0];
 
   return (
     <div className="flex flex-col gap-2 relative">
@@ -217,8 +226,8 @@ const DashboardRow = ({ id, title, onTitleChange, onDelete, showDelete }: Dashbo
         <SettingsModal 
             isOpen={isSettingsOpen}
             onClose={() => setIsSettingsOpen(false)}
-            accounts={socialAccounts}
-            onSave={setSocialAccounts}
+            accounts={accounts} // Pasamos data global
+            onSave={onAccountsChange} // Actualizamos data global
         />
 
         {/* --- SECTION HEADER --- */}
@@ -319,7 +328,7 @@ const DashboardRow = ({ id, title, onTitleChange, onDelete, showDelete }: Dashbo
             {/* HEADER / BARRA DE ACCESO RÁPIDO */}
             <div className="p-4 bg-black/20 border-b border-white/5 flex items-center justify-between shrink-0">
                 <div className="flex gap-2">
-                {socialAccounts.map((acc) => (
+                {accounts.map((acc) => (
                     <button
                     key={acc.id}
                     onClick={() => setActiveNetwork(acc.id)}
@@ -351,7 +360,7 @@ const DashboardRow = ({ id, title, onTitleChange, onDelete, showDelete }: Dashbo
             <div className={`transition-[max-height,opacity] duration-500 ease-in-out overflow-hidden bg-black/20 ${isSocialExpanded ? 'max-h-[600px] opacity-100 border-b border-white/5' : 'max-h-0 opacity-0'}`}>
                 <div className="p-4 space-y-3">
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Cuentas Conectadas</p>
-                {socialAccounts.map((acc) => (
+                {accounts.map((acc) => (
                     <div key={acc.id} onClick={() => setActiveNetwork(acc.id)} className={`flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/5 cursor-pointer transition-all ${acc.bgHover}`}>
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg bg-black/40 ${acc.color}`}>{acc.icon}</div>
@@ -389,11 +398,13 @@ const DashboardRow = ({ id, title, onTitleChange, onDelete, showDelete }: Dashbo
             {/* ESTADO ACTIVO (Lo que se ve cuando está colapsado o expandido) */}
             <div className="flex-1 p-6 flex flex-col relative overflow-hidden">
                 {/* Fondo sutil del color de la red */}
-                <div className={`absolute top-0 right-0 w-[200px] h-[200px] bg-gradient-to-br from-${activeAccount.color.split('-')[1]}-500/10 to-transparent rounded-full blur-3xl pointer-events-none`} />
+                {activeAccount && (
+                    <div className={`absolute top-0 right-0 w-[200px] h-[200px] bg-gradient-to-br from-${activeAccount.color.split('-')[1] || 'gray'}-500/10 to-transparent rounded-full blur-3xl pointer-events-none`} />
+                )}
                 
                 <div className="relative z-10 flex-1 flex flex-col">
                     <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-light">Panel <strong className={activeAccount.color}>{activeAccount.name}</strong></h2>
+                    <h2 className="text-2xl font-light">Panel <strong className={activeAccount?.color || 'text-white'}>{activeAccount?.name || 'Vacio'}</strong></h2>
                     <span className="px-2 py-1 bg-green-500/10 text-green-400 text-[10px] font-bold rounded uppercase border border-green-500/20">En Línea</span>
                     </div>
 
@@ -463,7 +474,7 @@ const DashboardRow = ({ id, title, onTitleChange, onDelete, showDelete }: Dashbo
                 {/* Barra de Dirección Simulada */}
                 <div className="flex-1 bg-black/40 rounded-md border border-white/5 px-3 py-1.5 flex items-center gap-2 text-xs text-gray-400 font-mono overflow-hidden">
                 <LockIcon className="w-3 h-3 text-green-500" />
-                <span>https://{activeAccount.name.toLowerCase()}.com/{activeAccount.handle.replace('@','')}</span>
+                <span>{activeAccount ? `https://${activeAccount.name.toLowerCase()}.com/${activeAccount.handle.replace('@','')}` : 'https://...'}</span>
                 </div>
 
                 {/* Device Toggle */}
@@ -488,7 +499,7 @@ const DashboardRow = ({ id, title, onTitleChange, onDelete, showDelete }: Dashbo
                 
                 {/* Fake Website Header */}
                 <div className="h-14 bg-white border-b flex items-center justify-between px-4 sticky top-0 z-20 shrink-0">
-                    <span className="font-bold text-xl tracking-tighter text-black">{activeAccount.name}</span>
+                    <span className="font-bold text-xl tracking-tighter text-black">{activeAccount?.name || 'Web'}</span>
                     <div className="flex gap-3">
                         <Search className="w-5 h-5 text-gray-400"/>
                         <Menu className="w-5 h-5 text-black"/>
@@ -505,7 +516,7 @@ const DashboardRow = ({ id, title, onTitleChange, onDelete, showDelete }: Dashbo
                     
                     {/* Info */}
                     <div className="pt-8 px-4 pb-4 bg-white mb-2">
-                        <h1 className="font-bold text-lg text-black">{activeAccount.handle}</h1>
+                        <h1 className="font-bold text-lg text-black">{activeAccount?.handle || '...'}</h1>
                         <p className="text-gray-600 text-sm mt-1">Marca oficial. Futuro del diseño y la tecnología.</p>
                         <div className="flex gap-4 mt-3 text-sm">
                             <span className="font-bold text-black">125 <span className="font-normal text-gray-500">Posts</span></span>
@@ -590,15 +601,26 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message }: ConfirmMod
 
 // --- MAIN PAGE COMPONENT ---
 const FullStackDashboard = () => {
-    // Estado de las filas: Arreglo de objetos { id, title }
-    const [rows, setRows] = useState([{ id: 1, title: 'Panel Multimedia' }]);
+    // Estado Global de Filas (contiene toda la data importante)
+    const [rows, setRows] = useState<DashboardRowData[]>([
+        { 
+            id: 1, 
+            title: 'Panel Multimedia', 
+            accounts: DEFAULT_ACCOUNTS
+        }
+    ]);
     
-    // Estado del Modal de Eliminación
+    // Estado del Modal de Eliminación de Sección
     const [sectionToDelete, setSectionToDelete] = useState<number | null>(null);
 
+    // Funciones de Gestión de Estado Global
     const addRow = () => {
         const newId = rows.length > 0 ? Math.max(...rows.map(r => r.id)) + 1 : 1;
-        setRows([...rows, { id: newId, title: 'Nueva Sección' }]);
+        setRows([...rows, { 
+            id: newId, 
+            title: 'Nueva Sección',
+            accounts: DEFAULT_ACCOUNTS 
+        }]);
     };
 
     const confirmDeleteRow = (id: number) => {
@@ -616,9 +638,99 @@ const FullStackDashboard = () => {
         setRows(rows.map(row => row.id === id ? { ...row, title: newTitle } : row));
     };
 
+    const updateRowAccounts = (id: number, newAccounts: SocialAccount[]) => {
+        setRows(rows.map(row => row.id === id ? { ...row, accounts: newAccounts } : row));
+    };
+
+    // --- FUNCIONALIDAD GUARDAR / CARGAR ---
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    const handleSaveConfig = () => {
+        // Crear versión serializable del estado (sin componentes React como 'icon')
+        const serializableRows = rows.map(row => ({
+            ...row,
+            accounts: row.accounts.map(acc => {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { icon, ...rest } = acc;
+                return rest;
+            })
+        }));
+
+        const dataStr = JSON.stringify(serializableRows, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        
+        const exportFileDefaultName = 'dashboard-config.json';
+        
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+    };
+
+    const handleLoadConfig = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const content = e.target?.result as string;
+                const parsedData = JSON.parse(content);
+                
+                // Validación básica
+                if (Array.isArray(parsedData) && parsedData.length > 0 && parsedData[0].accounts) {
+                    // Reconstruir iconos porque React Nodes no se serializan
+                    // Mapeamos los iconos basándonos en el nombre de la red o ID aproximado
+                    // O simplemente reinicializamos iconos visuales si es necesario.
+                    // Para simplificar, re-asignaremos iconos basados en el nombre o tipo.
+                    
+                    const restoredRows = parsedData.map((row: any) => ({
+                        ...row,
+                        accounts: row.accounts.map((acc: any) => ({
+                            ...acc,
+                            icon: getIconForAccount(acc.name) // Función helper para restaurar iconos
+                        }))
+                    }));
+
+                    setRows(restoredRows);
+                    alert('Configuración cargada correctamente.');
+                } else {
+                    alert('El archivo no tiene el formato correcto.');
+                }
+            } catch (error) {
+                console.error('Error parsing JSON:', error);
+                alert('Error al leer el archivo de configuración.');
+            }
+        };
+        reader.readAsText(file);
+        // Reset input value to allow reloading same file
+        event.target.value = '';
+    };
+
+    // Helper para recuperar iconos (ya que JSON no guarda componentes React)
+    const getIconForAccount = (name: string) => {
+        const lowerName = name.toLowerCase();
+        if (lowerName.includes('facebook')) return <Facebook className="w-5 h-5" />;
+        if (lowerName.includes('instagram')) return <Instagram className="w-5 h-5" />;
+        if (lowerName.includes('twitter') || lowerName.includes('x')) return <Twitter className="w-5 h-5" />;
+        if (lowerName.includes('tiktok')) return <span className="font-bold text-lg leading-none">♪</span>;
+        if (lowerName.includes('youtube')) return <Youtube className="w-5 h-5" />;
+        return <Globe className="w-5 h-5" />; // Default fallback
+    };
+
+
     return (
         <div className="min-h-screen bg-[#09090b] text-slate-200 font-sans overflow-y-auto overflow-x-hidden relative selection:bg-cyan-500/30">
         
+        {/* Input Oculto para Cargar Archivo */}
+        <input 
+            type="file" 
+            ref={fileInputRef}
+            onChange={handleLoadConfig}
+            className="hidden"
+            accept=".json"
+        />
+
         {/* --- MODALES --- */}
         <ConfirmModal 
             isOpen={sectionToDelete !== null}
@@ -638,11 +750,31 @@ const FullStackDashboard = () => {
         {/* --- CONTENIDO PRINCIPAL --- */}
         <div className="relative z-10 flex flex-col p-8 gap-8 max-w-[1600px] mx-auto pb-32">
             
-            <header className="mb-4">
-                <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500">
-                    Dashboard Multicuentas
-                </h1>
-                <p className="text-gray-400">Gestiona múltiples marcas en paneles unificados.</p>
+            <header className="mb-4 flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500">
+                        Dashboard Multicuentas
+                    </h1>
+                    <p className="text-gray-400">Gestiona múltiples marcas en paneles unificados.</p>
+                </div>
+
+                {/* BOTONES GUARDAR / CARGAR (Top Right) */}
+                <div className="flex gap-3">
+                    <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 hover:border-cyan-500/50 transition-all text-sm font-medium"
+                    >
+                        <UploadIcon size={16} />
+                        Cargar
+                    </button>
+                    <button 
+                        onClick={handleSaveConfig}
+                        className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl shadow-lg shadow-cyan-900/20 transition-all text-sm font-bold"
+                    >
+                        <Download size={16} />
+                        Guardar
+                    </button>
+                </div>
             </header>
 
             {/* Renderizar Filas */}
@@ -652,7 +784,9 @@ const FullStackDashboard = () => {
                         key={row.id} 
                         id={row.id} 
                         title={row.title}
+                        accounts={row.accounts}
                         onTitleChange={(newTitle) => updateRowTitle(row.id, newTitle)}
+                        onAccountsChange={(newAccounts) => updateRowAccounts(row.id, newAccounts)}
                         onDelete={() => confirmDeleteRow(row.id)}
                         showDelete={true}
                     />
