@@ -2,11 +2,14 @@
   "name": "organizador-web",
   "version": "0.1.0",
   "private": true,
+  "main": "main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "electron": "wait-on tcp:3001 && electron .",
+    "electron:dev": "concurrently -k \"npm run dev\" \"cross-env ELECTRON_START_URL=http://localhost:3001 npm run electron\""
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -22,9 +25,13 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^40.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^9.0.3"
   }
 }

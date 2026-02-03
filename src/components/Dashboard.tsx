@@ -9,6 +9,15 @@ import {
   Download, Upload as UploadIcon, FileJson, FilePlus, Users, Music2, PlusCircle, RefreshCcw, Link2, ChevronsDownUp, ChevronsUpDown
 } from 'lucide-react';
 
+// --- ELECTRON API TYPE ---
+declare global {
+  interface Window {
+    electronAPI?: {
+      abrirExterno: (url: string, browser: string) => void;
+    };
+  }
+}
+
 // --- COMPONENTE INTERNO PARA LAS SECCIONES PLEGABLES ---
 const CollapsibleSection = ({ title, icon: Icon, isOpen, onToggle, children }: { title: string, icon: any, isOpen: boolean, onToggle: () => void, children: React.ReactNode }) => (
   <div className="border border-white/5 bg-white/5 rounded-xl overflow-hidden mb-4 transition-all duration-300">
@@ -48,6 +57,7 @@ interface SocialAccount {
     border: string;
     isActive?: boolean;
     defaultHandle?: string;
+    browserChoice?: string; // 'chrome' | 'edge' | 'firefox' | 'opera'
 }
 
 interface DashboardRowData {
@@ -371,6 +381,23 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
   // Estado Edición Título
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [showInactiveList, setShowInactiveList] = useState(false);
+  const [openBrowserDropdown, setOpenBrowserDropdown] = useState<string | number | null>(null);
+
+  // --- FUNCIÓN PARA ABRIR LINKS (Electron-aware) ---
+  const handleOpenLink = (url: string, browser?: string) => {
+    if (!url) return;
+    
+    // Usa el navegador especificado o el seleccionado globalmente
+    const targetBrowser = browser || selectedBrowser;
+    
+    // Si estamos en Electron, usa el navegador seleccionado
+    if (window.electronAPI) {
+      window.electronAPI.abrirExterno(url, targetBrowser);
+    } else {
+      // Si estamos en web, abre en nueva pestaña
+      window.open(url, '_blank');
+    }
+  };
 
   const activeAccounts = accounts.filter(a => a.isActive);
   const inactiveAccounts = accounts.filter(a => !a.isActive);
@@ -603,9 +630,88 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
                                 <p className="text-[10px] text-gray-500 truncate font-mono">{acc.handle || 'Sin configurar'}</p>
                             </div>
 
-                            {/* Icono Link Externo */}
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                <ExternalLink size={14} className="text-gray-600 hover:text-white" />
+                            {/* Browser Selector Dropdown + Open Button */}
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity relative">
+                                {/* Browser Dropdown Toggle */}
+                                <div className="relative">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenBrowserDropdown(openBrowserDropdown === acc.id ? null : acc.id);
+                                        }}
+                                        className="flex items-center gap-1 px-2 py-1 bg-black/40 border border-white/10 hover:border-cyan-500/30 rounded transition-all text-[10px]"
+                                        title="Seleccionar navegador"
+                                    >
+                                        {(() => {
+                                            const browser = acc.browserChoice || selectedBrowser;
+                                            const icons: Record<string, string> = {
+                                                chrome: '🌐',
+                                                edge: '🔷',
+                                                firefox: '🦊',
+                                                opera: '🅾'
+                                            };
+                                            return <span>{icons[browser]}</span>;
+                                        })()}
+                                        <ChevronDown size={10} className="text-gray-500" />
+                                    </button>
+                                    
+                                    {/* Dropdown Menu */}
+                                    {openBrowserDropdown === acc.id && (
+                                        <div className="absolute top-full left-0 mt-1 bg-black/90 border border-white/20 rounded-lg overflow-hidden shadow-xl z-50 min-w-[100px]">
+                                            {['chrome', 'edge', 'firefox', 'opera'].map((browser) => {
+                                                const isSelected = (acc.browserChoice || selectedBrowser) === browser;
+                                                const icons: Record<string, string> = {
+                                                    chrome: '🌐',
+                                                    edge: '🔷',
+                                                    firefox: '🦊',
+                                                    opera: '🅾'
+                                                };
+                                                const names: Record<string, string> = {
+                                                    chrome: 'Chrome',
+                                                    edge: 'Edge',
+                                                    firefox: 'Firefox',
+                                                    opera: 'Opera'
+                                                };
+                                                return (
+                                                    <button
+                                                        key={browser}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const updated = accounts.map(a => 
+                                                                a.id === acc.id ? { ...a, browserChoice: browser } : a
+                                                            );
+                                                            onAccountsChange(updated);
+                                                            setOpenBrowserDropdown(null);
+                                                        }}
+                                                        className={`w-full flex items-center gap-2 px-3 py-2 text-xs transition-all ${
+                                                            isSelected 
+                                                                ? 'bg-cyan-500/30 text-cyan-300' 
+                                                                : 'text-gray-400 hover:bg-white/10 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        <span className="text-sm">{icons[browser]}</span>
+                                                        <span>{names[browser]}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                {/* Open Link Button */}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const url = acc.handle && !acc.handle.includes('Sin vincular') 
+                                            ? acc.handle 
+                                            : null;
+                                        if (url) handleOpenLink(url, acc.browserChoice);
+                                    }}
+                                    className="p-1.5 bg-cyan-600/20 hover:bg-cyan-600/40 rounded border border-cyan-500/30 transition-all"
+                                    title="Abrir"
+                                >
+                                    <ExternalLink size={12} className="text-cyan-400" />
+                                </button>
                             </div>
 
                         </div>
