@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Folder, Image as ImageIcon, Video, Upload, ChevronRight, 
   Facebook, Instagram, Twitter, ChevronDown, ChevronUp, 
@@ -9,23 +9,177 @@ import {
   Plus, Trash2, Edit3, Settings, UserPlus
 } from 'lucide-react';
 
+// --- TYPES ---
+interface SocialAccount {
+    id: number;
+    name: string;
+    handle: string;
+    icon: React.ReactNode;
+    color: string;
+    bgHover: string;
+    border: string;
+}
+
+// --- SUB-COMPONENT: SETTINGS MODAL ---
+interface SettingsModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    accounts: SocialAccount[];
+    onSave: (updatedAccounts: SocialAccount[]) => void;
+}
+
+const SettingsModal = ({ isOpen, onClose, accounts, onSave }: SettingsModalProps) => {
+    const [localAccounts, setLocalAccounts] = useState<SocialAccount[]>(accounts);
+
+    // Sync state when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            setLocalAccounts(accounts);
+        }
+    }, [isOpen, accounts]);
+
+    const handleChange = (id: number, field: 'name' | 'handle', value: string) => {
+        setLocalAccounts(prev => prev.map(acc => 
+            acc.id === id ? { ...acc, [field]: value } : acc
+        ));
+    };
+
+    const handleDelete = (id: number) => {
+        setLocalAccounts(prev => prev.filter(acc => acc.id !== id));
+    };
+
+    const handleAddWeb = () => {
+        const newId = Date.now();
+        const newAccount: SocialAccount = {
+            id: newId,
+            name: 'Mi Sitio Web',
+            handle: 'www.miweb.com',
+            icon: <Globe className="w-5 h-5" />, // Use Globe icon for custom sites
+            color: 'text-white',
+            bgHover: 'hover:bg-white/10',
+            border: 'border-white/20'
+        };
+        setLocalAccounts([...localAccounts, newAccount]);
+    };
+
+    const handleSave = () => {
+        onSave(localAccounts);
+        onClose();
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
+            
+            <div className="relative bg-[#09090b] border border-white/10 rounded-2xl shadow-2xl p-6 max-w-lg w-full flex flex-col gap-6 transform transition-all scale-100 ring-1 ring-white/5 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-white/10 pb-4 sticky top-0 bg-[#09090b] z-10">
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                        <Settings size={20} className="text-cyan-400" />
+                        Configurar Redes
+                    </h3>
+                    <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="space-y-4">
+                    {localAccounts.map((acc) => (
+                        <div key={acc.id} className="flex flex-col gap-1 p-3 rounded-xl border border-white/5 bg-white/5 hover:border-white/10 transition-colors group">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                    <div className={`p-1 rounded bg-black/50 ${acc.color} opacity-80`}>
+                                        {acc.icon}
+                                    </div>
+                                    <input 
+                                        type="text"
+                                        value={acc.name}
+                                        onChange={(e) => handleChange(acc.id, 'name', e.target.value)}
+                                        className="bg-transparent border-none outline-none text-gray-400 font-bold uppercase w-full focus:text-cyan-400 focus:bg-white/5 rounded px-1 transition-colors"
+                                    />
+                                </span>
+                                <button 
+                                    onClick={() => handleDelete(acc.id)}
+                                    className="text-gray-600 hover:text-red-400 transition-colors p-1"
+                                    title="Eliminar esta red"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg p-2 focus-within:border-cyan-500/50 transition-all">
+                                <span className="text-gray-500 text-xs font-mono">URL/User:</span>
+                                <input
+                                    type="text"
+                                    value={acc.handle}
+                                    onChange={(e) => handleChange(acc.id, 'handle', e.target.value)}
+                                    className="bg-transparent border-none outline-none text-white text-sm w-full placeholder-gray-600 font-mono"
+                                    placeholder={`Usuario o URL...`}
+                                />
+                            </div>
+                        </div>
+                    ))}
+
+                    <button 
+                        onClick={handleAddWeb}
+                        className="w-full py-3 border border-dashed border-white/20 rounded-xl flex items-center justify-center gap-2 text-gray-400 hover:text-white hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all text-sm font-medium"
+                    >
+                        <Globe size={16} />
+                        Agregar Nueva Web
+                    </button>
+                </div>
+
+                {/* Footer */}
+                <div className="flex gap-3 justify-end border-t border-white/10 pt-4 sticky bottom-0 bg-[#09090b] z-10">
+                    <button 
+                        onClick={onClose}
+                        className="px-4 py-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium"
+                    >
+                        Cancelar
+                    </button>
+                    <button 
+                        onClick={handleSave}
+                        className="px-6 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-900/20 transition-all text-sm font-bold"
+                    >
+                        Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 // --- SUB-COMPONENT: SINGLE DASHBOARD ROW ---
 interface DashboardRowProps {
     id: number;
     title: string;
     onTitleChange: (newTitle: string) => void;
     onDelete: () => void;
-    onAddAccounts: () => void; // Placeholder for "Configuración (Agregar cuentas)"
     showDelete: boolean;
 }
 
-const DashboardRow = ({ id, title, onTitleChange, onDelete, onAddAccounts, showDelete }: DashboardRowProps) => {
+const DashboardRow = ({ id, title, onTitleChange, onDelete, showDelete }: DashboardRowProps) => {
   // --- ESTADOS PROPIOS DE ESTA FILA ---
   
   // Estado Panel Central (Redes)
   const [isSocialExpanded, setIsSocialExpanded] = useState(false);
   const [activeNetwork, setActiveNetwork] = useState(1); // 1: FB, 2: IG, 3: TK, 4: X
   
+  // Estado Configuración
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Datos Iniciales (State)
+  const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([
+    { id: 1, name: 'Facebook', handle: '@MiMarcaOficial', icon: <Facebook className="w-5 h-5" />, color: 'text-blue-500', bgHover: 'hover:bg-blue-500/20', border: 'border-blue-500/50' },
+    { id: 2, name: 'Instagram', handle: '@estilo_futuro', icon: <Instagram className="w-5 h-5" />, color: 'text-pink-500', bgHover: 'hover:bg-pink-500/20', border: 'border-pink-500/50' },
+    { id: 3, name: 'TikTok', handle: '@viral_video', icon: <span className="font-bold text-lg leading-none">♪</span>, color: 'text-cyan-400', bgHover: 'hover:bg-cyan-500/20', border: 'border-cyan-500/50' },
+    { id: 4, name: 'Twitter/X', handle: '@news_now', icon: <Twitter className="w-5 h-5" />, color: 'text-gray-300', bgHover: 'hover:bg-gray-500/20', border: 'border-gray-500/50' },
+  ]);
+
   // Estado Panel Derecho (Navegador)
   const [selectedBrowser, setSelectedBrowser] = useState('chrome'); // chrome, safari, firefox
   const [viewMode, setViewMode] = useState('desktop'); // desktop, mobile
@@ -33,22 +187,23 @@ const DashboardRow = ({ id, title, onTitleChange, onDelete, onAddAccounts, showD
   // Estado Edición Título
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
-  // Datos Simulados
-  const socialAccounts = [
-    { id: 1, name: 'Facebook', handle: '@MiMarcaOficial', icon: <Facebook className="w-5 h-5" />, color: 'text-blue-500', bgHover: 'hover:bg-blue-500/20', border: 'border-blue-500/50' },
-    { id: 2, name: 'Instagram', handle: '@estilo_futuro', icon: <Instagram className="w-5 h-5" />, color: 'text-pink-500', bgHover: 'hover:bg-pink-500/20', border: 'border-pink-500/50' },
-    { id: 3, name: 'TikTok', handle: '@viral_video', icon: <span className="font-bold text-lg leading-none">♪</span>, color: 'text-cyan-400', bgHover: 'hover:bg-cyan-500/20', border: 'border-cyan-500/50' },
-    { id: 4, name: 'Twitter/X', handle: '@news_now', icon: <Twitter className="w-5 h-5" />, color: 'text-gray-300', bgHover: 'hover:bg-gray-500/20', border: 'border-gray-500/50' },
-  ];
-
+  // Mock Folders
   const folders = ['Campaña Verano 2026', 'Lanzamiento Producto', 'Reels Pendientes', 'Historias Destacadas', 'Memes Virales'];
 
   const activeAccount = socialAccounts.find(a => a.id === activeNetwork) || socialAccounts[0];
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 relative">
         
-        {/* --- SECTION HEADER (Nuevo según imagen) --- */}
+        {/* MODAL CONFIGURACIÓN (Local a la fila) */}
+        <SettingsModal 
+            isOpen={isSettingsOpen}
+            onClose={() => setIsSettingsOpen(false)}
+            accounts={socialAccounts}
+            onSave={setSocialAccounts}
+        />
+
+        {/* --- SECTION HEADER --- */}
         <div className="flex items-center justify-between px-1">
             {/* Left: Editable Title */}
             <div className="flex items-center gap-3 group/title cursor-text" onClick={() => setIsEditingTitle(true)}>
@@ -74,7 +229,7 @@ const DashboardRow = ({ id, title, onTitleChange, onDelete, onAddAccounts, showD
             {/* Right: Controls */}
             <div className="flex items-center gap-2">
                 <button 
-                    onClick={onAddAccounts}
+                    onClick={() => setIsSettingsOpen(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all text-sm font-medium backdrop-blur-md"
                 >
                     <Settings size={16} />
@@ -190,7 +345,10 @@ const DashboardRow = ({ id, title, onTitleChange, onDelete, onAddAccounts, showD
                     <Zap size={14} className={acc.id === activeNetwork ? 'text-green-400' : 'text-gray-600'} />
                     </div>
                 ))}
-                <button className="w-full py-2 text-xs text-center border border-dashed border-white/20 text-gray-400 rounded-lg hover:text-white hover:border-cyan-500 transition-colors">
+                <button 
+                    onClick={() => setIsSettingsOpen(true)}
+                    className="w-full py-2 text-xs text-center border border-dashed border-white/20 text-gray-400 rounded-lg hover:text-white hover:border-cyan-500 transition-colors"
+                >
                     + Conectar Nueva Marca
                 </button>
                 </div>
@@ -426,11 +584,6 @@ const FullStackDashboard = () => {
         setRows(rows.map(row => row.id === id ? { ...row, title: newTitle } : row));
     };
 
-    const handleAddAccounts = (id: number) => {
-        console.log(`Open configuration for row ${id}`);
-        // Here we could open a modal or add mock data
-    };
-
     return (
         <div className="min-h-screen bg-[#09090b] text-slate-200 font-sans overflow-y-auto overflow-x-hidden relative selection:bg-cyan-500/30">
         
@@ -469,7 +622,6 @@ const FullStackDashboard = () => {
                         title={row.title}
                         onTitleChange={(newTitle) => updateRowTitle(row.id, newTitle)}
                         onDelete={() => confirmDeleteRow(row.id)}
-                        onAddAccounts={() => handleAddAccounts(row.id)}
                         showDelete={true}
                     />
                 ))}
