@@ -6,7 +6,7 @@ import {
   Facebook, Instagram, Twitter, ChevronDown, ChevronUp, 
   Zap, Monitor, Smartphone, Globe, Search, Bell, Menu, LayoutGrid, X,
   Plus, Trash2, Edit3, Settings, UserPlus, ExternalLink, Youtube,
-  Download, Upload as UploadIcon, FileJson, FilePlus, Users, Music2, PlusCircle, RefreshCcw, Link2
+  Download, Upload as UploadIcon, FileJson, FilePlus, Users, Music2, PlusCircle, RefreshCcw, Link2, ChevronsDownUp, ChevronsUpDown
 } from 'lucide-react';
 
 // --- COMPONENTE INTERNO PARA LAS SECCIONES PLEGABLES ---
@@ -354,6 +354,7 @@ interface DashboardRowProps {
 
 const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, onDelete, showDelete }: DashboardRowProps) => {
   // --- ESTADOS PROPIOS DE LA UI (No persistentes o locales) ---
+  const [isCompact, setIsCompact] = useState(false);
   
   // Estado Panel Central (Redes)
   const [isAccountsOpen, setAccountsOpen] = useState(false);
@@ -479,6 +480,15 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
                     <Settings size={16} />
                     <span>Configuración</span>
                 </button>
+
+                 {/* Botón Compactar / Expandir */}
+                 <button 
+                    onClick={() => setIsCompact(!isCompact)}
+                    className={`p-2 rounded-lg transition-all ${isCompact ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-white/5 border border-white/10 text-gray-400 hover:text-white'}`}
+                    title={isCompact ? "Expandir Panel" : "Compactar Panel"}
+                >
+                    {isCompact ? <ChevronsUpDown size={18} /> : <ChevronsDownUp size={18} />}
+                </button>
                 
                 {showDelete && (
                      <button 
@@ -494,7 +504,7 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
 
 
         {/* --- CONTENT BODY (Unified 3 Columns) --- */}
-        <div className="w-full h-[700px] bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl flex overflow-hidden relative group hover:shadow-cyan-900/10 hover:border-white/20 transition-all duration-500">
+        <div className={`w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl flex overflow-hidden relative group hover:shadow-cyan-900/10 hover:border-white/20 transition-all duration-500 ease-in-out ${isCompact ? 'h-[320px] border-cyan-500/20 shadow-none' : 'h-[700px]'}`}>
         
         {/* =======================================================
             COLUMNA 1: GESTOR DE ACTIVOS (Izquierda)
