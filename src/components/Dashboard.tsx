@@ -6,18 +6,48 @@ import {
   Facebook, Instagram, Twitter, ChevronDown, ChevronUp, 
   Zap, Monitor, Smartphone, Globe, Search, Bell, Menu, LayoutGrid, X,
   Plus, Trash2, Edit3, Settings, UserPlus, ExternalLink, Youtube,
-  Download, Upload as UploadIcon, FileJson
+  Download, Upload as UploadIcon, FileJson, FilePlus, Users, Music2, PlusCircle, RefreshCcw, Link2
 } from 'lucide-react';
+
+// --- COMPONENTE INTERNO PARA LAS SECCIONES PLEGABLES ---
+const CollapsibleSection = ({ title, icon: Icon, isOpen, onToggle, children }: { title: string, icon: any, isOpen: boolean, onToggle: () => void, children: React.ReactNode }) => (
+  <div className="border border-white/5 bg-white/5 rounded-xl overflow-hidden mb-4 transition-all duration-300">
+    {/* Barra de Título del Acordeón */}
+    <button 
+      onClick={onToggle}
+      className="w-full flex items-center justify-between p-4 bg-black/20 hover:bg-white/5 transition-colors group"
+    >
+      <div className="flex items-center gap-3">
+        <div className={`p-2 rounded-lg transition-colors ${isOpen ? 'bg-cyan-500/20 text-cyan-400' : 'bg-white/5 text-gray-500'}`}>
+          <Icon size={18} />
+        </div>
+        <span className={`text-sm font-bold tracking-wide transition-colors ${isOpen ? 'text-white' : 'text-gray-400'}`}>
+          {title}
+        </span>
+      </div>
+      {isOpen ? <ChevronDown size={18} className="text-cyan-400"/> : <ChevronRight size={18} className="text-gray-600"/>}
+    </button>
+
+    {/* Contenido Oculto/Visible */}
+    <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
+      <div className="p-4 border-t border-white/5 bg-[#09090b]/30">
+        {children}
+      </div>
+    </div>
+  </div>
+);
 
 // --- TYPES ---
 interface SocialAccount {
-    id: number;
+    id: string | number;
     name: string;
     handle: string;
-    icon: React.ReactNode;
+    icon: any; // Changed to any to store component reference if needed, or keeping ReactNode is fine but user snippet stores ref.
     color: string;
     bgHover: string;
     border: string;
+    isActive?: boolean;
+    defaultHandle?: string;
 }
 
 interface DashboardRowData {
@@ -27,12 +57,28 @@ interface DashboardRowData {
 }
 
 // --- CONSTANTS ---
+// --- CONSTANTS ---
+// --- ICONS ---
+const XIcon = ({ className }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+);
+
+const PLATFORM_DEFAULTS: Record<string, any> = {
+  fb: { name: 'Facebook', defaultHandle: 'Sin vincular', icon: Facebook, color: 'text-blue-500', bgHover: 'hover:bg-blue-500/20', border: 'border-blue-500/50' },
+  ig: { name: 'Instagram', defaultHandle: 'Sin vincular', icon: Instagram, color: 'text-pink-500', bgHover: 'hover:bg-pink-500/20', border: 'border-pink-500/50' },
+  tw: { name: 'Twitter/X', defaultHandle: 'Sin vincular', icon: XIcon, color: 'text-white', bgHover: 'hover:bg-gray-500/20', border: 'border-gray-500/50' },
+  tk: { name: 'TikTok', defaultHandle: 'Sin vincular', icon: Music2, color: 'text-cyan-400', bgHover: 'hover:bg-cyan-500/20', border: 'border-cyan-500/50' },
+  yt: { name: 'YouTube', defaultHandle: 'Sin vincular', icon: Youtube, color: 'text-red-500', bgHover: 'hover:bg-red-500/20', border: 'border-red-500/50' },
+};
+
 const DEFAULT_ACCOUNTS: SocialAccount[] = [
-    { id: 1, name: 'Facebook', handle: '@MiMarcaOficial', icon: <Facebook className="w-5 h-5" />, color: 'text-blue-500', bgHover: 'hover:bg-blue-500/20', border: 'border-blue-500/50' },
-    { id: 2, name: 'Instagram', handle: '@estilo_futuro', icon: <Instagram className="w-5 h-5" />, color: 'text-pink-500', bgHover: 'hover:bg-pink-500/20', border: 'border-pink-500/50' },
-    { id: 3, name: 'TikTok', handle: '@viral_video', icon: <span className="font-bold text-lg leading-none">♪</span>, color: 'text-cyan-400', bgHover: 'hover:bg-cyan-500/20', border: 'border-cyan-500/50' },
-    { id: 4, name: 'Twitter/X', handle: '@news_now', icon: <Twitter className="w-5 h-5" />, color: 'text-gray-300', bgHover: 'hover:bg-gray-500/20', border: 'border-gray-500/50' },
-    { id: 5, name: 'YouTube', handle: '@mi_canal', icon: <Youtube className="w-5 h-5" />, color: 'text-red-500', bgHover: 'hover:bg-red-500/20', border: 'border-red-500/50' },
+    { id: 'fb', ...PLATFORM_DEFAULTS.fb, handle: '@MiMarcaOficial', isActive: true, icon: <Facebook className="w-5 h-5" /> },
+    { id: 'ig', ...PLATFORM_DEFAULTS.ig, handle: '@estilo_futuro', isActive: true, icon: <Instagram className="w-5 h-5" /> },
+    { id: 'tw', ...PLATFORM_DEFAULTS.tw, handle: 'Sin vincular', isActive: true, icon: <XIcon className="w-5 h-5" /> },
+    { id: 'tk', ...PLATFORM_DEFAULTS.tk, handle: 'Sin vincular', isActive: true, icon: <Music2 className="w-5 h-5" /> },
+    { id: 'yt', ...PLATFORM_DEFAULTS.yt, handle: 'Sin vincular', isActive: true, icon: <Youtube className="w-5 h-5" /> },
 ];
 
 // --- SUB-COMPONENT: SETTINGS MODAL ---
@@ -45,7 +91,7 @@ interface SettingsModalProps {
 
 const SettingsModal = ({ isOpen, onClose, accounts, onSave }: SettingsModalProps) => {
     const [localAccounts, setLocalAccounts] = useState<SocialAccount[]>(accounts);
-    const [accountToDelete, setAccountToDelete] = useState<number | null>(null);
+    const [accountToDelete, setAccountToDelete] = useState<string | number | null>(null);
 
     // Sync state when modal opens
     useEffect(() => {
@@ -54,13 +100,13 @@ const SettingsModal = ({ isOpen, onClose, accounts, onSave }: SettingsModalProps
         }
     }, [isOpen, accounts]);
 
-    const handleChange = (id: number, field: 'name' | 'handle', value: string) => {
+    const handleChange = (id: string | number, field: 'name' | 'handle', value: string) => {
         setLocalAccounts(prev => prev.map(acc => 
             acc.id === id ? { ...acc, [field]: value } : acc
         ));
     };
 
-    const confirmDelete = (id: number) => {
+    const confirmDelete = (id: string | number) => {
         setAccountToDelete(id);
     };
 
@@ -80,7 +126,8 @@ const SettingsModal = ({ isOpen, onClose, accounts, onSave }: SettingsModalProps
             icon: <Globe className="w-5 h-5" />,
             color: 'text-white',
             bgHover: 'hover:bg-white/10',
-            border: 'border-white/20'
+            border: 'border-white/20',
+            isActive: true
         };
         setLocalAccounts([...localAccounts, newAccount]);
     };
@@ -105,9 +152,9 @@ const SettingsModal = ({ isOpen, onClose, accounts, onSave }: SettingsModalProps
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                 <div className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
                 
-                <div className="relative bg-[#09090b] border border-white/10 rounded-2xl shadow-2xl p-6 max-w-lg w-full flex flex-col gap-6 transform transition-all scale-100 ring-1 ring-white/5 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                <div className="relative bg-[#09090b] border border-white/10 rounded-2xl shadow-2xl max-w-lg w-full flex flex-col transform transition-all scale-100 ring-1 ring-white/5 max-h-[80vh] overflow-hidden">
                     {/* Header */}
-                    <div className="flex items-center justify-between border-b border-white/10 pb-4 sticky top-0 bg-[#09090b] z-10">
+                    <div className="flex items-center justify-between border-b border-white/10 p-6 bg-[#09090b]">
                         <h3 className="text-xl font-bold text-white flex items-center gap-2">
                             <Settings size={20} className="text-cyan-400" />
                             Configurar Redes
@@ -117,55 +164,91 @@ const SettingsModal = ({ isOpen, onClose, accounts, onSave }: SettingsModalProps
                         </button>
                     </div>
 
-                    {/* Body */}
-                    <div className="space-y-4">
-                        {localAccounts.map((acc) => (
-                            <div key={acc.id} className="flex flex-col gap-1 p-3 rounded-xl border border-white/5 bg-white/5 hover:border-white/10 transition-colors group">
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                                        <div className={`p-1 rounded bg-black/50 ${acc.color} opacity-80`}>
-                                            {acc.icon}
-                                        </div>
-                                        <input 
+                    {/* Scrollable Content */}
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+                        {/* Redes Activas / Configuradas */}
+                        <div className="space-y-4">
+                            {localAccounts.map((acc) => (
+                                <div key={acc.id} className="flex flex-col gap-1 p-3 rounded-xl border border-white/5 bg-white/5 hover:border-white/10 transition-colors group">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                            <div className={`p-1 rounded bg-black/50 ${acc.color} opacity-80`}>
+                                                {acc.icon}
+                                            </div>
+                                            <input 
+                                                type="text"
+                                                value={acc.name}
+                                                onChange={(e) => handleChange(acc.id, 'name', e.target.value)}
+                                                className="bg-transparent border-none outline-none text-gray-400 font-bold uppercase w-full focus:text-cyan-400 focus:bg-white/5 rounded px-1 transition-colors"
+                                            />
+                                        </span>
+                                        <button 
+                                            onClick={() => confirmDelete(acc.id)}
+                                            className="text-gray-600 hover:text-red-400 transition-colors p-1"
+                                            title="Eliminar esta red"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg p-2 focus-within:border-cyan-500/50 transition-all">
+                                        <span className="text-gray-500 text-xs font-mono">URL/User:</span>
+                                        <input
                                             type="text"
-                                            value={acc.name}
-                                            onChange={(e) => handleChange(acc.id, 'name', e.target.value)}
-                                            className="bg-transparent border-none outline-none text-gray-400 font-bold uppercase w-full focus:text-cyan-400 focus:bg-white/5 rounded px-1 transition-colors"
+                                            value={acc.handle}
+                                            onChange={(e) => handleChange(acc.id, 'handle', e.target.value)}
+                                            className="bg-transparent border-none outline-none text-white text-sm w-full placeholder-gray-600 font-mono"
+                                            placeholder={`Usuario o URL...`}
                                         />
-                                    </span>
-                                    <button 
-                                        onClick={() => confirmDelete(acc.id)}
-                                        className="text-gray-600 hover:text-red-400 transition-colors p-1"
-                                        title="Eliminar esta red"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
+                                    </div>
                                 </div>
-                                
-                                <div className="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg p-2 focus-within:border-cyan-500/50 transition-all">
-                                    <span className="text-gray-500 text-xs font-mono">URL/User:</span>
-                                    <input
-                                        type="text"
-                                        value={acc.handle}
-                                        onChange={(e) => handleChange(acc.id, 'handle', e.target.value)}
-                                        className="bg-transparent border-none outline-none text-white text-sm w-full placeholder-gray-600 font-mono"
-                                        placeholder={`Usuario o URL...`}
-                                    />
+                            ))}
+
+                            {/* Botón Nueva Web Personalizada */}
+                            <button 
+                                onClick={handleAddWeb}
+                                className="w-full py-3 border border-dashed border-white/20 rounded-xl flex items-center justify-center gap-2 text-gray-400 hover:text-white hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all text-sm font-medium"
+                            >
+                                <Globe size={16} />
+                                Agregar Nueva Web
+                            </button>
+                        </div>
+
+                        {/* Redes Disponibles (Presets Eliminados) */}
+                        {Object.keys(PLATFORM_DEFAULTS).filter(pid => !localAccounts.some(a => a.id === pid)).length > 0 && (
+                            <div className="pt-4 border-t border-white/10">
+                                <h4 className="text-xs font-bold text-gray-500 uppercase mb-3">Redes Disponibles</h4>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {Object.keys(PLATFORM_DEFAULTS)
+                                        .filter(pid => !localAccounts.some(a => a.id === pid))
+                                        .map(pid => {
+                                            const preset = PLATFORM_DEFAULTS[pid];
+                                            return (
+                                                <button
+                                                    key={pid}
+                                                    onClick={() => {
+                                                        const newAcc = { id: pid, ...preset, handle: '', isActive: true };
+                                                        // Ensure icon is rendered correctly as ReactNode
+                                                        newAcc.icon = <preset.icon className="w-5 h-5" />;
+                                                        setLocalAccounts([...localAccounts, newAcc]);
+                                                    }}
+                                                    className="flex items-center gap-2 p-2 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 transition-colors text-left"
+                                                >
+                                                    <div className={`p-1 rounded bg-black/50 text-gray-400`}>
+                                                        <preset.icon size={14} />
+                                                    </div>
+                                                    <span className="text-xs font-medium text-gray-300">{preset.name}</span>
+                                                    <PlusCircle size={12} className="ml-auto text-cyan-500 opacity-60" />
+                                                </button>
+                                            );
+                                    })}
                                 </div>
                             </div>
-                        ))}
-
-                        <button 
-                            onClick={handleAddWeb}
-                            className="w-full py-3 border border-dashed border-white/20 rounded-xl flex items-center justify-center gap-2 text-gray-400 hover:text-white hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all text-sm font-medium"
-                        >
-                            <Globe size={16} />
-                            Agregar Nueva Web
-                        </button>
+                        )}
                     </div>
 
                     {/* Footer */}
-                    <div className="flex gap-3 justify-end border-t border-white/10 pt-4 sticky bottom-0 bg-[#09090b] z-10">
+                    <div className="flex gap-3 justify-end border-t border-white/10 p-6 bg-[#09090b]">
                         <button 
                             onClick={onClose}
                             className="px-4 py-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium"
@@ -201,7 +284,8 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
   // --- ESTADOS PROPIOS DE LA UI (No persistentes o locales) ---
   
   // Estado Panel Central (Redes)
-  const [isSocialExpanded, setIsSocialExpanded] = useState(false);
+  const [isAccountsOpen, setAccountsOpen] = useState(false);
+  const [isUploadOpen, setUploadOpen] = useState(true);
   const [activeNetwork, setActiveNetwork] = useState(accounts[0]?.id || 1); // Default to first account
   
   // Estado Configuración
@@ -213,9 +297,70 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
 
   // Estado Edición Título
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [showInactiveList, setShowInactiveList] = useState(false);
+
+  const activeAccounts = accounts.filter(a => a.isActive);
+  const inactiveAccounts = accounts.filter(a => !a.isActive);
+
+  // LÓGICA CLAVE: ELIMINAR VS. REINICIAR
+  const handleAccountAction = (id: string | number, action: 'delete' | 'restore') => {
+    const updatedAccounts = accounts.map(acc => {
+      if (acc.id !== id) return acc;
+
+      if (action === 'delete') {
+        // Al eliminar, solo la ocultamos (isActive = false)
+        return { ...acc, isActive: false };
+      } 
+
+      if (action === 'restore') {
+        // AL RESTAURAR: Volvemos a los datos DE MUESTRA (Reset)
+        // Usamos PLATFORM_DEFAULTS para pisar cualquier dato viejo
+        const defaultData = PLATFORM_DEFAULTS[String(id)];
+        if (!defaultData) return acc; // Safety check for custom accounts or unmapped IDs
+
+        return { 
+          ...acc, 
+          isActive: true, 
+          name: defaultData.name,
+          handle: defaultData.defaultHandle,
+          // Re-instantiate icon if needed, or keep existing one if styling allows
+        };
+      }
+      return acc;
+    });
+    onAccountsChange(updatedAccounts);
+  };
+
+  /* --- AÑADIR WEB PERSONALIZADA (Botón "Crear") --- */
+  const handleAddCustomWeb = () => {
+    const newId = `web-${Date.now()}`;
+    const newAccount: SocialAccount = {
+        id: newId,
+        name: 'Nuevo Sitio Web',
+        handle: '', // Empty initially
+        icon: <Globe className="w-5 h-5" />,
+        color: 'text-emerald-400',
+        bgHover: 'hover:bg-emerald-500/10',
+        border: 'border-emerald-500/20',
+        isActive: true,
+        defaultHandle: ''
+    };
+    
+    // Add to state
+    onAccountsChange([...accounts, newAccount]);
+    setActiveNetwork(newId);
+    setIsSettingsOpen(true); // Open Settings immediately to configure URL
+  };
+
+  const handleUpdateAccount = (id: string | number, field: 'name' | 'handle', value: string) => {
+    const updated = accounts.map(acc => 
+        acc.id === id ? { ...acc, [field]: value } : acc
+    );
+    onAccountsChange(updated);
+  };
 
   // Mock Folders (Esto podría moverse al estado global también si se desea persistir)
-  const folders = ['Campaña Verano 2026', 'Lanzamiento Producto', 'Reels Pendientes', 'Historias Destacadas', 'Memes Virales'];
+
 
   const activeAccount = accounts.find(a => a.id === activeNetwork) || accounts[0];
 
@@ -296,19 +441,12 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
                 </div>
 
                 {/* Lista de Carpetas */}
+                {/* Lista de Carpetas (Eliminada) */}
                 <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                {folders.map((folder, i) => (
-                    <div key={i} className="group flex items-center gap-3 p-3 rounded-lg hover:bg-white/10 cursor-pointer transition-all border border-transparent hover:border-white/5">
-                    <div className={`p-2 rounded-md ${i % 2 === 0 ? 'bg-indigo-500/20 text-indigo-300' : 'bg-purple-500/20 text-purple-300'}`}>
-                        {i % 2 === 0 ? <ImageIcon size={14} /> : <Video size={14} />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-300 group-hover:text-white truncate">{folder}</p>
-                        <p className="text-[10px] text-gray-500">12 items</p>
-                    </div>
-                    <ChevronRight size={14} className="text-gray-700 group-hover:text-cyan-400 opacity-0 group-hover:opacity-100 transition-all" />
-                    </div>
-                ))}
+                   {/* Espacio reservado para futuras carpetas o gestor de archivos */}
+                   <div className="p-4 text-center text-gray-600 text-xs italic border border-dashed border-white/5 rounded-lg">
+                       Sin carpetas activas
+                   </div>
                 </div>
 
                 {/* Stats Footer */}
@@ -347,95 +485,114 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
                 ))}
                 </div>
                 
-                {/* Toggle Button */}
+                {/* Botón de Configuración */}
                 <button 
-                onClick={() => setIsSocialExpanded(!isSocialExpanded)}
+                onClick={() => setIsSettingsOpen(true)}
                 className="p-2 bg-white/5 hover:bg-cyan-600/20 rounded-lg text-gray-400 hover:text-cyan-400 border border-white/5 transition-all"
                 >
-                {isSocialExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                <Settings size={18} />
                 </button>
             </div>
 
-            {/* CONTENIDO DESPLEGABLE (Lista Detallada) */}
-            <div className={`transition-[max-height,opacity] duration-500 ease-in-out overflow-hidden bg-black/20 ${isSocialExpanded ? 'max-h-[600px] opacity-100 border-b border-white/5' : 'max-h-0 opacity-0'}`}>
-                <div className="p-4 space-y-3">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Cuentas Conectadas</p>
-                {accounts.map((acc) => (
-                    <div key={acc.id} onClick={() => setActiveNetwork(acc.id)} className={`flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/5 cursor-pointer transition-all ${acc.bgHover}`}>
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg bg-black/40 ${acc.color}`}>{acc.icon}</div>
-                        <div>
-                        <h4 className="text-sm font-semibold text-gray-200">{acc.name}</h4>
-                        <p className="text-[10px] text-gray-500">{acc.handle}</p>
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            let url = acc.handle;
-                            if (!url.startsWith('http')) {
-                                url = `https://${url}`;
-                            }
-                            window.open(url, '_blank');
-                        }}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all"
-                        title="Abrir en navegador"
-                    >
-                        <ExternalLink size={14} />
-                    </button>
-                    </div>
-                ))}
-                <button 
-                    onClick={() => setIsSettingsOpen(true)}
-                    className="w-full py-2 text-xs text-center border border-dashed border-white/20 text-gray-400 rounded-lg hover:text-white hover:border-cyan-500 transition-colors"
-                >
-                    + Conectar Nueva Marca
-                </button>
-                </div>
-            </div>
-
-            {/* ESTADO ACTIVO (Lo que se ve cuando está colapsado o expandido) */}
-            <div className="flex-1 p-6 flex flex-col relative overflow-hidden">
-                {/* Fondo sutil del color de la red */}
-                {activeAccount && (
-                    <div className={`absolute top-0 right-0 w-[200px] h-[200px] bg-gradient-to-br from-${activeAccount.color.split('-')[1] || 'gray'}-500/10 to-transparent rounded-full blur-3xl pointer-events-none`} />
-                )}
+            {/* CUERPO CON SCROLL (Plegables Apilados) */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
                 
-                <div className="relative z-10 flex-1 flex flex-col">
-                    <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-light">Panel <strong className={activeAccount?.color || 'text-white'}>{activeAccount?.name || 'Vacio'}</strong></h2>
-                    <span className="px-2 py-1 bg-green-500/10 text-green-400 text-[10px] font-bold rounded uppercase border border-green-500/20">En Línea</span>
-                    </div>
+                {/* SECCIÓN A: LISTA DE CUENTAS (Plegable) */}
+                <CollapsibleSection 
+                title="Cuentas Conectadas" 
+                icon={Users} 
+                isOpen={isAccountsOpen} 
+                onToggle={() => setAccountsOpen(!isAccountsOpen)}
+                >
+                <div className="space-y-2">
+                    {/* LISTA DE ACTIVAS */}
+                    {activeAccounts.length > 0 ? (
+                    activeAccounts.map((acc) => (
+                        <div key={acc.id} onClick={() => setActiveNetwork(acc.id)} className={`group flex items-center gap-3 p-3 rounded-xl border border-white/5 bg-white/5 cursor-pointer transition-all hover:bg-white/10 hover:border-white/10 ${activeNetwork === acc.id ? 'ring-1 ring-white/20 bg-white/10' : ''}`}>
+                            
+                            {/* Icono */}
+                            <div className={`p-2 rounded-lg bg-black/40 ${String(acc.color).replace('text-', 'bg-').replace('-500', '-500/20').replace('-400', '-400/20')} border border-white/5`}>
+                                <div className={acc.color}>{acc.icon}</div>
+                            </div>
 
-                    {/* Feed de Actividad / Cola de Publicación */}
-                    <div className="flex-1 space-y-4">
-                    <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-                        <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs text-gray-400">Próxima Publicación</span>
-                        <span className="text-xs text-cyan-400">Hoy, 18:00</span>
-                        </div>
-                        <div className="h-24 bg-black/30 rounded-lg border border-white/5 flex items-center justify-center text-gray-600 text-xs italic">
-                        Arrastra un archivo aquí para programar
-                        </div>
-                    </div>
+                            {/* Info (Nombre + URL) */}
+                            <div className="flex-1 min-w-0">
+                                <h4 className="text-sm font-bold text-gray-200 leading-none mb-1">{acc.name}</h4>
+                                <p className="text-[10px] text-gray-500 truncate font-mono">{acc.handle || 'Sin configurar'}</p>
+                            </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                            <div className="text-xl font-bold text-white">12.5K</div>
-                            <div className="text-[10px] text-gray-500 uppercase">Seguidores</div>
+                            {/* Icono Link Externo */}
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                <ExternalLink size={14} className="text-gray-600 hover:text-white" />
+                            </div>
+
                         </div>
-                        <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                            <div className="text-xl font-bold text-white">+5.2%</div>
-                            <div className="text-[10px] text-gray-500 uppercase">Engagement</div>
+                    ))
+                    ) : (
+                        <p className="text-xs text-gray-500 text-center py-4">No hay cuentas visibles.</p>
+                    )}
+                    
+                    {/* Botón Añadir Página (Abre Configuración) */}
+                    <button 
+                        onClick={() => setIsSettingsOpen(true)}
+                        className="w-full py-3 mt-2 border border-dashed border-white/10 rounded-xl flex items-center justify-center gap-2 text-xs font-bold text-gray-500 hover:text-cyan-400 hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all group"
+                    >
+                        <div className="p-1 rounded-full bg-white/5 group-hover:bg-cyan-500/20 transition-colors">
+                            <Plus size={12} />
                         </div>
-                    </div>
+                        Añadir página
+                    </button>
+                    
+                </div>
+            </CollapsibleSection>
+
+
+                {/* SECCIÓN B: FORMULARIO DE CARGA (Plegable) */}
+                <CollapsibleSection 
+                title="Nueva Publicación" 
+                icon={FilePlus} 
+                isOpen={isUploadOpen} 
+                onToggle={() => setUploadOpen(!isUploadOpen)}
+                >
+                <div className="space-y-4">
+                    {/* Input Título */}
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase ml-1">Título</label>
+                        <input 
+                        type="text" 
+                        className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-sm text-white focus:border-cyan-500/50 outline-none transition-colors" 
+                        placeholder="Ej: Promo Verano..." 
+                        />
                     </div>
                     
-                    <button className="mt-6 w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl font-bold shadow-lg shadow-cyan-900/20 transition-all active:scale-95">
-                    Crear Publicación
+                    {/* Input Descripción */}
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase ml-1">Descripción</label>
+                        <textarea 
+                        rows={3} 
+                        className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-sm text-white focus:border-cyan-500/50 outline-none transition-colors resize-none" 
+                        placeholder="Escribe tu copy aquí..." 
+                        />
+                    </div>
+
+                    {/* Zona de Drop (Upload) */}
+                    <div className="border-2 border-dashed border-white/10 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-cyan-500/5 hover:border-cyan-500/30 transition-all cursor-pointer group">
+                        <div className="p-3 bg-white/5 rounded-full mb-3 group-hover:scale-110 transition-transform">
+                        <Upload className="text-gray-400 group-hover:text-cyan-400" size={24} />
+                        </div>
+                        <p className="text-sm text-gray-300 font-medium">Arrastra tus archivos</p>
+                        <p className="text-xs text-gray-600 mt-1">Soporta video e imágenes</p>
+                    </div>
+
+                    {/* Botón Publicar */}
+                    <button className="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-lg text-white text-sm font-bold shadow-lg shadow-cyan-900/20 mt-2 transition-all active:scale-[0.98]">
+                    Publicar Ahora
                     </button>
                 </div>
+                </CollapsibleSection>
+                
+                {/* Espacio extra al final */}
+                <div className="h-8"></div>
             </div>
         </div>
 
@@ -529,7 +686,7 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
                         {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
                         <div key={n} className="aspect-square bg-gray-200 relative group cursor-pointer hover:opacity-90">
                             <img 
-                                src={`https://picsum.photos/400?random=${n + activeNetwork * 10 + id}`} 
+                                src={`https://picsum.photos/400?random=${n + String(activeNetwork).split('').reduce((a,b)=>a+b.charCodeAt(0),0) + id}`} 
                                 alt="Post" 
                                 className="w-full h-full object-cover"
                             />
@@ -645,7 +802,7 @@ const FullStackDashboard = () => {
     // --- FUNCIONALIDAD GUARDAR / CARGAR ---
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-    const handleSaveConfig = () => {
+    const handleSaveConfig = async () => {
         // Crear versión serializable del estado (sin componentes React como 'icon')
         const serializableRows = rows.map(row => ({
             ...row,
@@ -657,6 +814,36 @@ const FullStackDashboard = () => {
         }));
 
         const dataStr = JSON.stringify(serializableRows, null, 2);
+
+        try {
+            // Intentar usar la API moderna de Acceso a Archivos para "Guardar Como"
+            // @ts-ignore
+            if (window.showSaveFilePicker) {
+                // @ts-ignore
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: 'dashboard-config.json',
+                    types: [{
+                        description: 'JSON Configuration File',
+                        accept: { 'application/json': ['.json'] },
+                    }],
+                });
+                
+                // @ts-ignore
+                const writable = await handle.createWritable();
+                await writable.write(dataStr);
+                await writable.close();
+                alert('Configuración guardada correctamente.');
+                return; 
+            }
+        } catch (err) {
+            // Si el usuario cancela, no hacemos nada. Si falla la API, pasamos al fallback.
+            if ((err as Error).name === 'AbortError') {
+                return;
+            }
+            console.warn('File System Access API fallback:', err);
+        }
+
+        // Fallback: Método clásico de descarga (si no se soporta la API o falla)
         const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
         
         const exportFileDefaultName = 'dashboard-config.json';
