@@ -6,7 +6,7 @@ import {
   Folder, Image as ImageIcon, Video, Upload, ChevronRight, 
   Facebook, Instagram, Twitter, ChevronDown, ChevronUp, 
   Zap, Monitor, Smartphone, Globe, Search, Bell, Menu, LayoutGrid, X,
-  Plus, Trash2, Edit3, Settings, UserPlus
+  Plus, Trash2, Edit3, Settings, UserPlus, ExternalLink
 } from 'lucide-react';
 
 // --- TYPES ---
@@ -30,6 +30,7 @@ interface SettingsModalProps {
 
 const SettingsModal = ({ isOpen, onClose, accounts, onSave }: SettingsModalProps) => {
     const [localAccounts, setLocalAccounts] = useState<SocialAccount[]>(accounts);
+    const [accountToDelete, setAccountToDelete] = useState<number | null>(null);
 
     // Sync state when modal opens
     useEffect(() => {
@@ -44,8 +45,15 @@ const SettingsModal = ({ isOpen, onClose, accounts, onSave }: SettingsModalProps
         ));
     };
 
-    const handleDelete = (id: number) => {
-        setLocalAccounts(prev => prev.filter(acc => acc.id !== id));
+    const confirmDelete = (id: number) => {
+        setAccountToDelete(id);
+    };
+
+    const executeDelete = () => {
+        if (accountToDelete !== null) {
+            setLocalAccounts(prev => prev.filter(acc => acc.id !== accountToDelete));
+            setAccountToDelete(null);
+        }
     };
 
     const handleAddWeb = () => {
@@ -54,7 +62,7 @@ const SettingsModal = ({ isOpen, onClose, accounts, onSave }: SettingsModalProps
             id: newId,
             name: 'Mi Sitio Web',
             handle: 'www.miweb.com',
-            icon: <Globe className="w-5 h-5" />, // Use Globe icon for custom sites
+            icon: <Globe className="w-5 h-5" />,
             color: 'text-white',
             bgHover: 'hover:bg-white/10',
             border: 'border-white/20'
@@ -70,85 +78,95 @@ const SettingsModal = ({ isOpen, onClose, accounts, onSave }: SettingsModalProps
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
-            
-            <div className="relative bg-[#09090b] border border-white/10 rounded-2xl shadow-2xl p-6 max-w-lg w-full flex flex-col gap-6 transform transition-all scale-100 ring-1 ring-white/5 max-h-[80vh] overflow-y-auto custom-scrollbar">
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-white/10 pb-4 sticky top-0 bg-[#09090b] z-10">
-                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                        <Settings size={20} className="text-cyan-400" />
-                        Configurar Redes
-                    </h3>
-                    <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
-                        <X size={20} />
-                    </button>
-                </div>
+        <>
+            <ConfirmModal 
+                isOpen={accountToDelete !== null}
+                onClose={() => setAccountToDelete(null)}
+                onConfirm={executeDelete}
+                title="¿Eliminar Cuenta?"
+                message="Esta acción eliminará la cuenta de tu lista de configuración. Tendrás que volver a añadirla si la necesitas."
+            />
 
-                {/* Body */}
-                <div className="space-y-4">
-                    {localAccounts.map((acc) => (
-                        <div key={acc.id} className="flex flex-col gap-1 p-3 rounded-xl border border-white/5 bg-white/5 hover:border-white/10 transition-colors group">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                                    <div className={`p-1 rounded bg-black/50 ${acc.color} opacity-80`}>
-                                        {acc.icon}
-                                    </div>
-                                    <input 
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
+                
+                <div className="relative bg-[#09090b] border border-white/10 rounded-2xl shadow-2xl p-6 max-w-lg w-full flex flex-col gap-6 transform transition-all scale-100 ring-1 ring-white/5 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                    {/* Header */}
+                    <div className="flex items-center justify-between border-b border-white/10 pb-4 sticky top-0 bg-[#09090b] z-10">
+                        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                            <Settings size={20} className="text-cyan-400" />
+                            Configurar Redes
+                        </h3>
+                        <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
+                            <X size={20} />
+                        </button>
+                    </div>
+
+                    {/* Body */}
+                    <div className="space-y-4">
+                        {localAccounts.map((acc) => (
+                            <div key={acc.id} className="flex flex-col gap-1 p-3 rounded-xl border border-white/5 bg-white/5 hover:border-white/10 transition-colors group">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                        <div className={`p-1 rounded bg-black/50 ${acc.color} opacity-80`}>
+                                            {acc.icon}
+                                        </div>
+                                        <input 
+                                            type="text"
+                                            value={acc.name}
+                                            onChange={(e) => handleChange(acc.id, 'name', e.target.value)}
+                                            className="bg-transparent border-none outline-none text-gray-400 font-bold uppercase w-full focus:text-cyan-400 focus:bg-white/5 rounded px-1 transition-colors"
+                                        />
+                                    </span>
+                                    <button 
+                                        onClick={() => confirmDelete(acc.id)}
+                                        className="text-gray-600 hover:text-red-400 transition-colors p-1"
+                                        title="Eliminar esta red"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                                
+                                <div className="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg p-2 focus-within:border-cyan-500/50 transition-all">
+                                    <span className="text-gray-500 text-xs font-mono">URL/User:</span>
+                                    <input
                                         type="text"
-                                        value={acc.name}
-                                        onChange={(e) => handleChange(acc.id, 'name', e.target.value)}
-                                        className="bg-transparent border-none outline-none text-gray-400 font-bold uppercase w-full focus:text-cyan-400 focus:bg-white/5 rounded px-1 transition-colors"
+                                        value={acc.handle}
+                                        onChange={(e) => handleChange(acc.id, 'handle', e.target.value)}
+                                        className="bg-transparent border-none outline-none text-white text-sm w-full placeholder-gray-600 font-mono"
+                                        placeholder={`Usuario o URL...`}
                                     />
-                                </span>
-                                <button 
-                                    onClick={() => handleDelete(acc.id)}
-                                    className="text-gray-600 hover:text-red-400 transition-colors p-1"
-                                    title="Eliminar esta red"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
+                                </div>
                             </div>
-                            
-                            <div className="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg p-2 focus-within:border-cyan-500/50 transition-all">
-                                <span className="text-gray-500 text-xs font-mono">URL/User:</span>
-                                <input
-                                    type="text"
-                                    value={acc.handle}
-                                    onChange={(e) => handleChange(acc.id, 'handle', e.target.value)}
-                                    className="bg-transparent border-none outline-none text-white text-sm w-full placeholder-gray-600 font-mono"
-                                    placeholder={`Usuario o URL...`}
-                                />
-                            </div>
-                        </div>
-                    ))}
+                        ))}
 
-                    <button 
-                        onClick={handleAddWeb}
-                        className="w-full py-3 border border-dashed border-white/20 rounded-xl flex items-center justify-center gap-2 text-gray-400 hover:text-white hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all text-sm font-medium"
-                    >
-                        <Globe size={16} />
-                        Agregar Nueva Web
-                    </button>
-                </div>
+                        <button 
+                            onClick={handleAddWeb}
+                            className="w-full py-3 border border-dashed border-white/20 rounded-xl flex items-center justify-center gap-2 text-gray-400 hover:text-white hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all text-sm font-medium"
+                        >
+                            <Globe size={16} />
+                            Agregar Nueva Web
+                        </button>
+                    </div>
 
-                {/* Footer */}
-                <div className="flex gap-3 justify-end border-t border-white/10 pt-4 sticky bottom-0 bg-[#09090b] z-10">
-                    <button 
-                        onClick={onClose}
-                        className="px-4 py-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium"
-                    >
-                        Cancelar
-                    </button>
-                    <button 
-                        onClick={handleSave}
-                        className="px-6 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-900/20 transition-all text-sm font-bold"
-                    >
-                        Guardar Cambios
-                    </button>
+                    {/* Footer */}
+                    <div className="flex gap-3 justify-end border-t border-white/10 pt-4 sticky bottom-0 bg-[#09090b] z-10">
+                        <button 
+                            onClick={onClose}
+                            className="px-4 py-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium"
+                        >
+                            Cancelar
+                        </button>
+                        <button 
+                            onClick={handleSave}
+                            className="px-6 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-900/20 transition-all text-sm font-bold"
+                        >
+                            Guardar Cambios
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 };
 
@@ -342,7 +360,21 @@ const DashboardRow = ({ id, title, onTitleChange, onDelete, showDelete }: Dashbo
                         <p className="text-[10px] text-gray-500">{acc.handle}</p>
                         </div>
                     </div>
-                    <Zap size={14} className={acc.id === activeNetwork ? 'text-green-400' : 'text-gray-600'} />
+
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            let url = acc.handle;
+                            if (!url.startsWith('http')) {
+                                url = `https://${url}`;
+                            }
+                            window.open(url, '_blank');
+                        }}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all"
+                        title="Abrir en navegador"
+                    >
+                        <ExternalLink size={14} />
+                    </button>
                     </div>
                 ))}
                 <button 
@@ -517,7 +549,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message }: ConfirmMod
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
             
