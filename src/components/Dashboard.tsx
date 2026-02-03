@@ -92,11 +92,15 @@ interface SettingsModalProps {
 const SettingsModal = ({ isOpen, onClose, accounts, onSave }: SettingsModalProps) => {
     const [localAccounts, setLocalAccounts] = useState<SocialAccount[]>(accounts);
     const [accountToDelete, setAccountToDelete] = useState<string | number | null>(null);
+    const [isAddingWeb, setIsAddingWeb] = useState(false);
+    const [newWebData, setNewWebData] = useState({ name: '', handle: '' });
 
     // Sync state when modal opens
     useEffect(() => {
         if (isOpen) {
             setLocalAccounts(accounts);
+            setIsAddingWeb(false);
+            setNewWebData({ name: '', handle: '' });
         }
     }, [isOpen, accounts]);
 
@@ -118,11 +122,19 @@ const SettingsModal = ({ isOpen, onClose, accounts, onSave }: SettingsModalProps
     };
 
     const handleAddWeb = () => {
+        setIsAddingWeb(true);
+    };
+
+    const confirmAddWeb = () => {
+        // Validation default values if empty
+        const finalName = newWebData.name.trim() || 'Mi Sitio Web';
+        const finalHandle = newWebData.handle.trim() || 'www.miweb.com';
+
         const newId = Date.now();
         const newAccount: SocialAccount = {
             id: newId,
-            name: 'Mi Sitio Web',
-            handle: 'www.miweb.com',
+            name: finalName,
+            handle: finalHandle,
             icon: <Globe className="w-5 h-5" />,
             color: 'text-white',
             bgHover: 'hover:bg-white/10',
@@ -130,7 +142,14 @@ const SettingsModal = ({ isOpen, onClose, accounts, onSave }: SettingsModalProps
             isActive: true
         };
         setLocalAccounts([...localAccounts, newAccount]);
+        setIsAddingWeb(false);
+        setNewWebData({ name: '', handle: '' });
     };
+
+    const cancelAddWeb = () => {
+        setIsAddingWeb(false);
+        setNewWebData({ name: '', handle: '' });
+    }
 
     const handleSave = () => {
         onSave(localAccounts);
@@ -212,6 +231,59 @@ const SettingsModal = ({ isOpen, onClose, accounts, onSave }: SettingsModalProps
                                 <Globe size={16} />
                                 Agregar Nueva Web
                             </button>
+
+                        {/* OVERLAY: Formulario Flotante para Nueva Web */}
+                        {isAddingWeb && (
+                            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6 animate-in fade-in duration-200">
+                                <div className="w-full max-w-sm bg-[#09090b] border border-white/20 rounded-2xl p-6 shadow-2xl ring-1 ring-cyan-500/20 transform animate-in zoom-in-95 duration-200">
+                                    <h4 className="text-sm font-bold text-white uppercase mb-4 flex items-center gap-2">
+                                        <Globe size={16} className="text-cyan-400" />
+                                        Nueva Página Personalizada
+                                    </h4>
+                                    
+                                    <div className="space-y-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] text-gray-500 uppercase font-bold ml-1">Nombre del Sitio</label>
+                                            <input 
+                                                type="text"
+                                                autoFocus
+                                                value={newWebData.name}
+                                                onChange={(e) => setNewWebData({...newWebData, name: e.target.value})}
+                                                onKeyDown={(e) => e.key === 'Enter' && confirmAddWeb()}
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-cyan-500/50 focus:bg-white/10 outline-none transition-all placeholder:text-gray-600"
+                                                placeholder="Ej: Mi Portafolio"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] text-gray-500 uppercase font-bold ml-1">URL / Enlace</label>
+                                            <input 
+                                                type="text"
+                                                value={newWebData.handle}
+                                                onChange={(e) => setNewWebData({...newWebData, handle: e.target.value})}
+                                                onKeyDown={(e) => e.key === 'Enter' && confirmAddWeb()}
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-cyan-500/50 focus:bg-white/10 outline-none transition-all placeholder:text-gray-600 font-mono"
+                                                placeholder="Ej: www.ejemplo.com"
+                                            />
+                                        </div>
+
+                                        <div className="flex gap-3 pt-2">
+                                            <button 
+                                                onClick={cancelAddWeb} 
+                                                className="flex-1 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-gray-400 text-xs font-bold transition-colors"
+                                            >
+                                                Cancelar
+                                            </button>
+                                            <button 
+                                                onClick={confirmAddWeb} 
+                                                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold shadow-lg shadow-cyan-900/20 transition-all active:scale-[0.98]"
+                                            >
+                                                Agregar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         </div>
 
                         {/* Redes Disponibles (Presets Eliminados) */}
