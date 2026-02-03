@@ -428,6 +428,13 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
     localStorage.setItem('dashboardActiveNetwork', String(activeNetwork));
   }, [activeNetwork]);
 
+  // --- PERSISTENCIA: GUARDAR ÚLTIMA CARPETA ---
+  useEffect(() => {
+    if (currentPath) {
+      localStorage.setItem('dashboardLastFolder', currentPath);
+    }
+  }, [currentPath]);
+
   // --- FUNCIÓN PARA ABRIR LINKS (Electron-aware) ---
   const handleOpenLink = (url: string, browser?: string) => {
     if (!url) return;
@@ -452,6 +459,49 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
     setOpenGlobalBrowserDropdown(false);
   };
 
+  // --- FUNCIÓN PARA ABRIR TODAS LAS CUENTAS ---
+  const handleOpenAll = () => {
+    const socialBaseUrls: Record<string, string> = {
+      fb: 'https://facebook.com/',
+      ig: 'https://instagram.com/',
+      tw: 'https://twitter.com/',
+      tk: 'https://tiktok.com/@', 
+      yt: 'https://youtube.com/@'
+    };
+
+    activeAccounts.forEach(acc => {
+      // Si no tiene handle o es el default, ignorar
+      if (!acc.handle || acc.handle === 'Sin vincular' || acc.handle === 'Sin configurar') return;
+
+      let url = acc.handle;
+      
+      // Si no es URL completa (no empieza con http), construimos
+      if (!url.startsWith('http')) {
+        // Limpiamos el @ si existe para FB, IG, TW, YT (YT a veces usa @, TK usa @)
+        // Pero para simplificar:
+        const cleanHandle = acc.handle.replace('@', '');
+        
+        if (typeof acc.id === 'string' && socialBaseUrls[acc.id]) {
+            // Es una red social conocida
+            // Para TikTok mantenemos el @ si la base lo requiere, pero mi base tiene @
+            // Ajuste fino:
+            if (acc.id === 'tk') {
+                 url = `${socialBaseUrls.tk}${cleanHandle}`;
+            } else if (acc.id === 'yt') {
+                 url = `${socialBaseUrls.yt}${cleanHandle}`;
+            } else {
+                 url = `${socialBaseUrls[acc.id as string]}${cleanHandle}`;
+            }
+        } else {
+            // Es una web custom (globo) o desconocida, asumimos que el handle es la url o dominio
+            url = `https://${url}`;
+        }
+      }
+
+      handleOpenLink(url, acc.browserChoice || selectedBrowser);
+    });
+  };
+
   // --- FUNCIONES DEL EXPLORADOR DE CARPETAS ---
   // 1. Botón "Subir Contenido": Abre selector de Windows
   const handleSelectRootFolder = async () => {
@@ -463,13 +513,32 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
 
   // 2. Función interna para leer la carpeta
   const navigateTo = async (path: string) => {
-    if (window.electronAPI) {
-      const content = await window.electronAPI.readDir(path);
-      setCurrentPath(path);
-      setFiles(content);
+    try {
+      if (window.electronAPI) {
+        const items = await window.electronAPI.readDir(path);
+        
+        // Separar carpetas y archivos
+        const sorted = items.sort((a, b) => {
+          if (a.isDirectory === b.isDirectory) return a.name.localeCompare(b.name);
+          return a.isDirectory ? -1 : 1;
+        });
+
+        setCurrentPath(path);
+        setFiles(sorted);
+      }
+    } catch (error) {
+      console.error("Error reading directory:", error);
     }
   };
 
+  // 3. Restaurar última carpeta al iniciar
+  useEffect(() => {
+    const savedPath = localStorage.getItem('dashboardLastFolder');
+    if (savedPath && window.electronAPI) {
+      navigateTo(savedPath);
+    }
+  }, []); // Solo al montar
+  
   // 3. Click en una carpeta (Entrar)
   const handleFolderClick = (folderPath: string) => {
     setHistory([...history, currentPath!]); // Guardamos donde estábamos
@@ -701,102 +770,119 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
             ======================================================= */}
         <div className="w-[380px] h-full border-r border-white/10 flex flex-col transition-all duration-500 bg-black/5">
             
-            {/* HEADER / BARRA DE ACCESO RÁPIDO */}
-            <div className="p-4 bg-black/20 border-b border-white/5 flex items-center justify-between shrink-0">
-                <div className="flex gap-2">
-                {accounts.map((acc) => (
-                    <button
-                    key={acc.id}
-                    onClick={() => setActiveNetwork(acc.id)}
-                    className={`relative p-2.5 rounded-xl transition-all duration-300 border ${
-                        activeNetwork === acc.id 
-                        ? `bg-white/10 ${acc.border} shadow-[0_0_15px_rgba(255,255,255,0.1)] text-white` 
-                        : 'bg-transparent border-transparent text-gray-500 hover:bg-white/5 hover:text-gray-300'
-                    }`}
-                    >
-                    {acc.icon}
-                    {/* Indicador Activo */}
-                    {activeNetwork === acc.id && (
-                        <span className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-cyan-400 rounded-full"></span>
-                    )}
-                    </button>
-                ))}
-                </div>
-                
-                {/* Controles de la derecha: Navegador Global + Configuración */}
-                <div className="flex items-center gap-2">
-                    {/* Global Browser Selector */}
-                    <div className="relative">
+            {/* ============================================================
+                HEADER DEFINITIVO: ICONOS SUPERPUESTOS (OVERFLOW + Z-INDEX)
+               ============================================================ */}
+            {/* CLAVE 1: 'overflow-visible' en el padre para permitir superposición */}
+            <div className="flex-none h-[70px] bg-[#13131A] border-b border-white/5 flex items-center justify-between relative overflow-visible z-20">
+              
+              {/* 1. ZONA IZQUIERDA (ICONOS) */}
+              {/* Usamos 'pointer-events-none' en el contenedor grande y 'auto' en los hijos
+                  para que el área vacía no bloquee clicks en los botones de la derecha si se superponen */}
+              <div className="flex-1 h-full flex items-center pl-6 min-w-0 relative z-40 group pointer-events-none">
+                  
+                  {/* Contenedor de iconos */}
+                  <div className="flex items-center transition-all duration-500 ease-out pointer-events-auto py-2">
+                    {accounts.map((acc, index) => {
+                        const colorName = acc.color.split('-')[1] || 'gray';
+                        return (
+                          <div 
+                            key={acc.id} 
+                            onClick={() => setActiveNetwork(acc.id)}
+                            className={`
+                              relative transition-all duration-500 ease-out cursor-pointer flex-shrink-0
+                              
+                              /* LÓGICA DE ACORDEÓN */
+                              /* 1. Normal: Márgenes negativos fuertes (muy juntos) */
+                              -ml-5 first:ml-0 
+                              
+                              /* 2. Hover en el GRUPO: Se separan (margen positivo pequeño) */
+                              group-hover:-ml-2 group-hover:first:ml-0
+                              
+                              /* CLAVE 2: AL PASAR EL MOUSE SOBRE UN ICONO, SE VA AL FRENTE DE TODO */
+                              /* hover:!z-[100] asegura que tape a los botones de la derecha */
+                              hover:!ml-2 hover:!mr-2 hover:!scale-110 hover:!z-[100]
+                            `}
+                            style={{ zIndex: index }} 
+                          >
+                            {/* El Icono Visual */}
+                            <div className={`
+                               w-10 h-10 rounded-xl flex items-center justify-center border shadow-lg backdrop-blur-md transition-all
+                               ${activeNetwork === acc.id 
+                                 ? `bg-${colorName}-500/80 border-white/20 text-white shadow-${colorName}-500/50 scale-105` 
+                                 : 'bg-[#18181b] border-white/10 text-gray-400 hover:bg-white/10 hover:border-white/30'
+                               }
+                            `}>
+                               {acc.icon}
+                            </div>
+
+                            {/* Tooltip */}
+                            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[9px] font-bold text-white bg-black/80 px-2 py-0.5 rounded opacity-0 group-hover:hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                              {acc.name}
+                            </span>
+                            
+                            {/* Indicador Activo */}
+                            {activeNetwork === acc.id && (
+                                <span className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-${colorName}-400 rounded-full`}></span>
+                            )}
+                          </div>
+                      );
+                    })}
+                  </div>
+              </div>
+
+              {/* 2. ZONA DERECHA (BOTONES DE ACCIÓN) */}
+              {/* CLAVE 3: Z-Index menor que el hover de los iconos (z-30 vs z-100) */}
+              {/* Quitamos el fondo sólido y la sombra para que los iconos pasen limpios por encima */}
+              <div className="flex-none flex items-center gap-2 pr-4 pl-4 h-full relative z-30 bg-[#13131A]/50 backdrop-blur-sm rounded-l-2xl ml-auto">
+                  
+                  {/* Botón Abrir Todo */}
+                  <button 
+                    onClick={handleOpenAll}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg transition-all text-[10px] font-bold uppercase tracking-wider whitespace-nowrap group"
+                    title="Abrir todas las webs"
+                  >
+                    <ExternalLink size={14} className="group-hover:scale-110 transition-transform"/>
+                    <span className="hidden xl:inline">Abrir Todo</span>
+                  </button>
+
+                  <div className="w-[1px] h-6 bg-white/10 mx-1"></div>
+
+                   {/* Global Browser Selector */}
+                   <div className="relative">
                         <button
                             onClick={() => setOpenGlobalBrowserDropdown(!openGlobalBrowserDropdown)}
-                            className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-purple-600/20 rounded-lg text-gray-400 hover:text-purple-400 border border-white/5 transition-all"
-                            title="Cambiar navegador para todas las cuentas"
+                            className="flex items-center gap-2 px-2 py-1.5 bg-white/5 hover:bg-purple-600/20 rounded-lg text-gray-400 hover:text-purple-400 border border-white/5 transition-all"
+                            title="Cambiar navegador global"
                         >
-                            {(() => {
-                                const icons: Record<string, string> = {
-                                    chrome: '🌐',
-                                    edge: '🔷',
-                                    firefox: '🦊',
-                                    opera: '🅾'
-                                };
-                                return (
-                                    <>
-                                        <span className="text-sm">{icons[selectedBrowser]}</span>
-                                        <ChevronDown size={14} />
-                                    </>
-                                );
+                             {(() => {
+                                const icons: Record<string, string> = { chrome: '🌐', edge: '🔷', firefox: '🦊', opera: '🅾' };
+                                return <span className="text-sm">{icons[selectedBrowser]}</span>;
                             })()}
+                            <ChevronDown size={14} />
                         </button>
-                        
-                        {/* Global Browser Dropdown Menu */}
                         {openGlobalBrowserDropdown && (
-                            <div className="absolute top-full right-0 mt-1 bg-black/90 border border-purple-500/30 rounded-lg overflow-hidden shadow-xl z-50 min-w-[140px]">
-                                <div className="px-3 py-2 bg-purple-900/20 border-b border-purple-500/20">
-                                    <p className="text-[10px] text-purple-300 font-bold uppercase tracking-wide">Aplicar a todos</p>
+                             <div className="absolute top-full right-0 mt-1 bg-black/90 border border-purple-500/30 rounded-lg overflow-hidden shadow-xl z-50 min-w-[140px]">
+                                <div className="px-3 py-2 bg-purple-900/20 border-b border-purple-500/20"> 
+                                    <p className="text-[10px] text-purple-300 font-bold uppercase">Aplicar a todos</p> 
                                 </div>
-                                {['chrome', 'edge', 'firefox', 'opera'].map((browser) => {
-                                    const isSelected = selectedBrowser === browser;
-                                    const icons: Record<string, string> = {
-                                        chrome: '🌐',
-                                        edge: '🔷',
-                                        firefox: '🦊',
-                                        opera: '🅾'
-                                    };
-                                    const names: Record<string, string> = {
-                                        chrome: 'Chrome',
-                                        edge: 'Edge',
-                                        firefox: 'Firefox',
-                                        opera: 'Opera'
-                                    };
-                                    return (
-                                        <button
-                                            key={browser}
-                                            onClick={() => applyBrowserToAll(browser)}
-                                            className={`w-full flex items-center gap-2 px-3 py-2 text-xs transition-all ${
-                                                isSelected 
-                                                    ? 'bg-purple-500/30 text-purple-300' 
-                                                    : 'text-gray-400 hover:bg-white/10 hover:text-white'
-                                            }`}
-                                        >
-                                            <span className="text-sm">{icons[browser]}</span>
-                                            <span>{names[browser]}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                                {['chrome', 'edge', 'firefox', 'opera'].map((browser) => (
+                                    <button
+                                        key={browser}
+                                        onClick={() => applyBrowserToAll(browser)}
+                                        className={`w-full flex items-center gap-2 px-3 py-2 text-xs transition-all ${selectedBrowser === browser ? 'bg-purple-500/30 text-purple-300' : 'text-gray-400 hover:bg-white/10 hover:text-white'}`}
+                                    >
+                                        <span className="text-sm">{{ chrome: '🌐', edge: '🔷', firefox: '🦊', opera: '🅾' }[browser]}</span>
+                                        <span>{{ chrome: 'Chrome', edge: 'Edge', firefox: 'Firefox', opera: 'Opera' }[browser]}</span>
+                                    </button>
+                                ))}
+                             </div>
                         )}
-                    </div>
-                    
-                    {/* Botón de Configuración */}
-                    <button 
-                        onClick={() => setIsSettingsOpen(true)}
-                        className="p-2 bg-white/5 hover:bg-cyan-600/20 rounded-lg text-gray-400 hover:text-cyan-400 border border-white/5 transition-all"
-                    >
-                        <Settings size={18} />
-                    </button>
-                </div>
-            </div>
+                   </div>
 
+              </div>
+
+            </div>
             {/* CUERPO CON SCROLL (Plegables Apilados) */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
                 
