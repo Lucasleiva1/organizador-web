@@ -774,15 +774,14 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
                 HEADER FINAL: PRECISIÓN + DESBORDE PERMITIDO
                ============================================================ */}
             {/* ============================================================
-                HEADER DE DOBLE PISO: TOTALMENTE AISLADO
+                HEADER FINAL: ESTÁTICO (Scroll Horizontal + Gap)
                ============================================================ */}
             <div className="flex-none flex flex-col bg-[#13131A] border-b border-white/5 z-20 relative">
 
               {/* ---------------------------------------------------------
                   PISO 1: BOTONERA DE CONTROL (ARRIBA)
-                  Aquí están tus botones fijos. Nadie los mueve.
                  --------------------------------------------------------- */}
-              <div className="h-10 flex items-center justify-end px-4 gap-2 border-b border-white/5 bg-[#13131A]">
+              <div className="h-10 flex items-center justify-end px-4 gap-2 border-b border-white/5 bg-[#13131A] relative z-30">
                   
                   {/* Botón Abrir Todo */}
                   <button 
@@ -796,7 +795,7 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
 
                   <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
 
-                   {/* Global Browser Selector (Integrado en Piso 1) */}
+                   {/* Global Browser Selector */}
                    <div className="relative z-50">
                         <button
                             onClick={() => setOpenGlobalBrowserDropdown(!openGlobalBrowserDropdown)}
@@ -851,56 +850,40 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
 
 
               {/* ---------------------------------------------------------
-                  PISO 2: MAZO DE ICONOS (ABAJO)
-                  Totalmente aislado. Si crecen, se van a la derecha infinita.
+                  PISO 2: ICONOS FIJOS (ABAJO) - SIN MOVIMIENTO, SOLO GAP
                  --------------------------------------------------------- */}
-              <div className="h-16 flex items-center px-4 relative overflow-visible">
-                  
-                  {/* EL GATILLO EXACTO (w-fit)
-                      Solo reacciona si el mouse entra en ESTA caja específica.
-                      Si tocas el aire a la derecha, no pasa nada.
+              <div className="h-16 flex items-center px-4 overflow-x-auto custom-scrollbar relative z-20">
+                  {/* gap-2: Espacio entre iconos
+                      overflow-x-auto: Permite scroll si hay muchos
+                      Sin efectos 'hover' locos, solo color.
                   */}
-                  <div className="w-fit flex items-center transition-all duration-500 ease-out group">
-                    
-                    {accounts.map((acc, index) => {
+                  <div className="flex items-center gap-2">
+                    {accounts.map((acc) => {
                          const colorName = acc.color.split('-')[1] || 'gray';
+                         const isActive = activeNetwork === acc.id;
                          return (
                           <div
                             key={acc.id}
                             onClick={() => setActiveNetwork(acc.id)}
                             className={`
-                              relative transition-all duration-500 ease-out cursor-pointer flex-shrink-0
-
-                              /* 1. ESTADO NORMAL: MUY APILADOS (Estilo Mazo) */
-                              -ml-6 first:ml-0
-                              
-                              /* 2. HOVER EN EL PISO 2: SE DESPLIEGAN */
-                              group-hover:-ml-2 group-hover:first:ml-0
-
-                              /* 3. HOVER EN LA CARTA: ZOOM Y PRIMER PLANO */
-                              hover:!ml-2 hover:!mr-2 hover:!scale-125 hover:!z-[100]
+                              w-10 h-10 rounded-xl flex items-center justify-center border transition-all cursor-pointer flex-shrink-0
+                              ${isActive 
+                                ? `bg-${colorName}-500/20 border-${colorName}-500/50 text-white shadow-[0_0_15px_rgba(0,0,0,0.5)]` 
+                                : 'bg-[#18181b] border-white/10 text-gray-400 hover:bg-white/10 hover:text-white hover:border-white/30'
+                              }
                             `}
-                            style={{ zIndex: index }}
+                            title={acc.name}
                           >
-                            {/* Diseño Visual de la Carta/Icono */}
-                            <div className={`
-                               w-10 h-10 rounded-xl flex items-center justify-center border shadow-xl backdrop-blur-md transition-all
-                               ${activeNetwork === acc.id 
-                                 ? `bg-${colorName}-500/90 border-white/30 text-white ring-2 ring-${colorName}-500/50` 
-                                 : 'bg-[#18181b] border-white/10 text-gray-400 hover:bg-[#27272a] hover:border-white/40 hover:text-white'
-                               }
-                            `}>
-                               {acc.icon}
-                            </div>
-
-                            {/* Etiqueta Flotante */}
-                            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[9px] font-bold text-white bg-black/90 px-2 py-1 rounded opacity-0 group-hover:hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                              {acc.name}
-                            </span>
+                             {/* Nota: En el código original acc.icon es un JSX.Element, no un componente Icon. 
+                                 Si necesitamos cambiar clases dentro del icono, tendríamos que clonarlo o usar un wrapper.
+                                 Aquí asumimos que el wrapper div controla el color general o que el icono hereda color. 
+                             */}
+                             <div className={`${isActive ? `text-${colorName}-400` : ''}`}>
+                                {acc.icon}
+                             </div>
                           </div>
                       );
                     })}
-
                   </div>
               </div>
 
