@@ -771,95 +771,43 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
         <div className="w-[380px] h-full border-r border-white/10 flex flex-col transition-all duration-500 bg-black/5">
             
             {/* ============================================================
-                HEADER DEFINITIVO: ICONOS SUPERPUESTOS (OVERFLOW + Z-INDEX)
+                HEADER FINAL: PRECISIÓN + DESBORDE PERMITIDO
                ============================================================ */}
-            {/* CLAVE 1: 'overflow-visible' en el padre para permitir superposición */}
-            <div className="flex-none h-[70px] bg-[#13131A] border-b border-white/5 flex items-center justify-between relative overflow-visible z-20">
-              
-              {/* 1. ZONA IZQUIERDA (ICONOS) */}
-              {/* Usamos 'pointer-events-none' en el contenedor grande y 'auto' en los hijos
-                  para que el área vacía no bloquee clicks en los botones de la derecha si se superponen */}
-              <div className="flex-1 h-full flex items-center pl-6 min-w-0 relative z-40 group pointer-events-none">
-                  
-                  {/* Contenedor de iconos */}
-                  <div className="flex items-center transition-all duration-500 ease-out pointer-events-auto py-2">
-                    {accounts.map((acc, index) => {
-                        const colorName = acc.color.split('-')[1] || 'gray';
-                        return (
-                          <div 
-                            key={acc.id} 
-                            onClick={() => setActiveNetwork(acc.id)}
-                            className={`
-                              relative transition-all duration-500 ease-out cursor-pointer flex-shrink-0
-                              
-                              /* LÓGICA DE ACORDEÓN */
-                              /* 1. Normal: Márgenes negativos fuertes (muy juntos) */
-                              -ml-5 first:ml-0 
-                              
-                              /* 2. Hover en el GRUPO: Se separan (margen positivo pequeño) */
-                              group-hover:-ml-2 group-hover:first:ml-0
-                              
-                              /* CLAVE 2: AL PASAR EL MOUSE SOBRE UN ICONO, SE VA AL FRENTE DE TODO */
-                              /* hover:!z-[100] asegura que tape a los botones de la derecha */
-                              hover:!ml-2 hover:!mr-2 hover:!scale-110 hover:!z-[100]
-                            `}
-                            style={{ zIndex: index }} 
-                          >
-                            {/* El Icono Visual */}
-                            <div className={`
-                               w-10 h-10 rounded-xl flex items-center justify-center border shadow-lg backdrop-blur-md transition-all
-                               ${activeNetwork === acc.id 
-                                 ? `bg-${colorName}-500/80 border-white/20 text-white shadow-${colorName}-500/50 scale-105` 
-                                 : 'bg-[#18181b] border-white/10 text-gray-400 hover:bg-white/10 hover:border-white/30'
-                               }
-                            `}>
-                               {acc.icon}
-                            </div>
+            {/* ============================================================
+                HEADER DE DOBLE PISO: TOTALMENTE AISLADO
+               ============================================================ */}
+            <div className="flex-none flex flex-col bg-[#13131A] border-b border-white/5 z-20 relative">
 
-                            {/* Tooltip */}
-                            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[9px] font-bold text-white bg-black/80 px-2 py-0.5 rounded opacity-0 group-hover:hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                              {acc.name}
-                            </span>
-                            
-                            {/* Indicador Activo */}
-                            {activeNetwork === acc.id && (
-                                <span className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-${colorName}-400 rounded-full`}></span>
-                            )}
-                          </div>
-                      );
-                    })}
-                  </div>
-              </div>
-
-              {/* 2. ZONA DERECHA (BOTONES DE ACCIÓN) */}
-              {/* CLAVE 3: Z-Index menor que el hover de los iconos (z-30 vs z-100) */}
-              {/* Quitamos el fondo sólido y la sombra para que los iconos pasen limpios por encima */}
-              <div className="flex-none flex items-center gap-2 pr-4 pl-4 h-full relative z-30 bg-[#13131A]/50 backdrop-blur-sm rounded-l-2xl ml-auto">
+              {/* ---------------------------------------------------------
+                  PISO 1: BOTONERA DE CONTROL (ARRIBA)
+                  Aquí están tus botones fijos. Nadie los mueve.
+                 --------------------------------------------------------- */}
+              <div className="h-10 flex items-center justify-end px-4 gap-2 border-b border-white/5 bg-[#13131A]">
                   
                   {/* Botón Abrir Todo */}
                   <button 
                     onClick={handleOpenAll}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg transition-all text-[10px] font-bold uppercase tracking-wider whitespace-nowrap group"
+                    className="flex items-center gap-2 px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded text-[10px] font-bold uppercase tracking-wider transition-all"
                     title="Abrir todas las webs"
                   >
-                    <ExternalLink size={14} className="group-hover:scale-110 transition-transform"/>
-                    <span className="hidden xl:inline">Abrir Todo</span>
+                    <ExternalLink size={12} />
+                    <span className="hidden sm:inline">Abrir Todo</span>
                   </button>
 
-                  <div className="w-[1px] h-6 bg-white/10 mx-1"></div>
+                  <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
 
-                   {/* Global Browser Selector */}
-                   <div className="relative">
+                   {/* Global Browser Selector (Integrado en Piso 1) */}
+                   <div className="relative z-50">
                         <button
                             onClick={() => setOpenGlobalBrowserDropdown(!openGlobalBrowserDropdown)}
-                            className="flex items-center gap-2 px-2 py-1.5 bg-white/5 hover:bg-purple-600/20 rounded-lg text-gray-400 hover:text-purple-400 border border-white/5 transition-all"
+                            className="flex items-center gap-2 px-2 py-1 bg-white/5 hover:bg-purple-600/20 rounded text-gray-400 hover:text-purple-400 border border-white/5 transition-all h-[26px]"
                             title="Cambiar navegador global"
                         >
                              {(() => {
                                 const icons: Record<string, string> = { chrome: '🌐', edge: '🔷', firefox: '🦊', opera: '🅾' };
-                                return <span className="text-sm">{icons[selectedBrowser]}</span>;
+                                return <span className="text-xs">{icons[selectedBrowser]}</span>;
                             })()}
-                            <ChevronDown size={14} />
+                            <ChevronDown size={12} />
                         </button>
                         {openGlobalBrowserDropdown && (
                              <div className="absolute top-full right-0 mt-1 bg-black/90 border border-purple-500/30 rounded-lg overflow-hidden shadow-xl z-50 min-w-[140px]">
@@ -880,6 +828,80 @@ const DashboardRow = ({ id, title, accounts, onTitleChange, onAccountsChange, on
                         )}
                    </div>
 
+                  <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
+
+                  {/* Configuración */}
+                  <button 
+                    onClick={() => setIsSettingsOpen(true)}
+                    className={`p-1.5 rounded transition-all hover:bg-white/10 ${isSettingsOpen ? 'text-white bg-white/10' : 'text-gray-400'}`}
+                    title="Configuración"
+                  >
+                     <Settings size={14} />
+                  </button>
+
+                  {/* Minimizar */}
+                  <button 
+                    onClick={() => setIsCompact(!isCompact)} 
+                    className="p-1.5 rounded hover:bg-white/10 text-gray-400 transition-all"
+                    title={isCompact ? "Expandir" : "Minimizar"}
+                  >
+                     {isCompact ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />}
+                  </button>
+              </div>
+
+
+              {/* ---------------------------------------------------------
+                  PISO 2: MAZO DE ICONOS (ABAJO)
+                  Totalmente aislado. Si crecen, se van a la derecha infinita.
+                 --------------------------------------------------------- */}
+              <div className="h-16 flex items-center px-4 relative overflow-visible">
+                  
+                  {/* EL GATILLO EXACTO (w-fit)
+                      Solo reacciona si el mouse entra en ESTA caja específica.
+                      Si tocas el aire a la derecha, no pasa nada.
+                  */}
+                  <div className="w-fit flex items-center transition-all duration-500 ease-out group">
+                    
+                    {accounts.map((acc, index) => {
+                         const colorName = acc.color.split('-')[1] || 'gray';
+                         return (
+                          <div
+                            key={acc.id}
+                            onClick={() => setActiveNetwork(acc.id)}
+                            className={`
+                              relative transition-all duration-500 ease-out cursor-pointer flex-shrink-0
+
+                              /* 1. ESTADO NORMAL: MUY APILADOS (Estilo Mazo) */
+                              -ml-6 first:ml-0
+                              
+                              /* 2. HOVER EN EL PISO 2: SE DESPLIEGAN */
+                              group-hover:-ml-2 group-hover:first:ml-0
+
+                              /* 3. HOVER EN LA CARTA: ZOOM Y PRIMER PLANO */
+                              hover:!ml-2 hover:!mr-2 hover:!scale-125 hover:!z-[100]
+                            `}
+                            style={{ zIndex: index }}
+                          >
+                            {/* Diseño Visual de la Carta/Icono */}
+                            <div className={`
+                               w-10 h-10 rounded-xl flex items-center justify-center border shadow-xl backdrop-blur-md transition-all
+                               ${activeNetwork === acc.id 
+                                 ? `bg-${colorName}-500/90 border-white/30 text-white ring-2 ring-${colorName}-500/50` 
+                                 : 'bg-[#18181b] border-white/10 text-gray-400 hover:bg-[#27272a] hover:border-white/40 hover:text-white'
+                               }
+                            `}>
+                               {acc.icon}
+                            </div>
+
+                            {/* Etiqueta Flotante */}
+                            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[9px] font-bold text-white bg-black/90 px-2 py-1 rounded opacity-0 group-hover:hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                              {acc.name}
+                            </span>
+                          </div>
+                      );
+                    })}
+
+                  </div>
               </div>
 
             </div>
